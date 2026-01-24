@@ -20,6 +20,7 @@ import { createChatRoutes } from "./modules/chat/routes/chat.routes";
 import { createVouchingRoutes } from "./modules/vouching/routes/vouching.routes";
 import { createPaymentRoutes } from "./modules/payments/routes/payment.routes";
 import { createNotificationRoutes } from "./modules/notifications/routes/notification.routes";
+import { createUploadRoutes } from "./modules/upload/routes/upload.routes";
 
 import { AuthService } from "./modules/auth/services/auth.service";
 import { UserService } from "./modules/users/services/user.service";
@@ -30,6 +31,7 @@ import { ChatService } from "./modules/chat/services/chat.service";
 import { VouchingService } from "./modules/vouching/services/vouching.service";
 import { PaymentService } from "./modules/payments/services/payment.service";
 import { NotificationService } from "./modules/notifications/services/notification.service";
+import { UploadService } from "./modules/upload/services/upload.service";
 
 import { AuthController } from "./modules/auth/controllers/auth.controller";
 import { UserController } from "./modules/users/controllers/user.controller";
@@ -40,6 +42,7 @@ import { ChatController } from "./modules/chat/controllers/chat.controller";
 import { VouchingController } from "./modules/vouching/controllers/vouching.controller";
 import { PaymentController } from "./modules/payments/controllers/payment.controller";
 import { NotificationController } from "./modules/notifications/controllers/notification.controller";
+import { UploadController } from "./modules/upload/controllers/upload.controller";
 
 export const createApp = () => {
   const app = express();
@@ -75,6 +78,7 @@ export const createApp = () => {
   const vouchingService = new VouchingService();
   const paymentService = new PaymentService();
   const notificationService = new NotificationService();
+  const uploadService = new UploadService();
 
   const authController = new AuthController(authService);
   const userController = new UserController(userService);
@@ -85,6 +89,7 @@ export const createApp = () => {
   const vouchingController = new VouchingController(vouchingService);
   const paymentController = new PaymentController(paymentService);
   const notificationController = new NotificationController(notificationService);
+  const uploadController = new UploadController(uploadService);
 
   app.use("/api/auth", createAuthRoutes(authController));
   app.use("/api/users", createUserRoutes(userController));
@@ -95,6 +100,7 @@ export const createApp = () => {
   app.use("/api/vouch", createVouchingRoutes(vouchingController));
   app.use("/api/payments", createPaymentRoutes(paymentController));
   app.use("/api/notifications", createNotificationRoutes(notificationController));
+  app.use("/api/upload", createUploadRoutes(uploadController));
 
   app.use((_req: Request, res: Response) => {
     res.status(404).json({

@@ -10,6 +10,7 @@ import { chatPaths } from "./paths/chat.paths";
 import { vouchingPaths } from "./paths/vouching.paths";
 import { paymentPaths } from "./paths/payment.paths";
 import { notificationPaths } from "./paths/notification.paths";
+import { uploadPaths } from "./paths/upload.paths";
 
 import { schemas } from "./schemas/index";
 
@@ -56,6 +57,7 @@ const swaggerDefinition: SwaggerDefinition = {
     ...vouchingPaths,
     ...paymentPaths,
     ...notificationPaths,
+    ...uploadPaths,
   },
 };
 

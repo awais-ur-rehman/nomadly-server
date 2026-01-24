@@ -6,6 +6,7 @@ import { marketplaceSchemas } from "./marketplace.schemas";
 import { chatSchemas } from "./chat.schemas";
 import { vouchingSchemas } from "./vouching.schemas";
 import { paymentSchemas } from "./payment.schemas";
+import { uploadSchemas } from "./upload.schemas";
 import { commonSchemas } from "./common.schemas";
 
 export const schemas = {
@@ -18,4 +19,5 @@ export const schemas = {
   ...chatSchemas,
   ...vouchingSchemas,
   ...paymentSchemas,
+  ...uploadSchemas,
 };
