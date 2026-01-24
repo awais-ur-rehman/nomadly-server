@@ -1,0 +1,75 @@
+import nodemailer from "nodemailer";
+import { logger } from "./logger";
+
+let transporter: nodemailer.Transporter | null = null;
+
+const createTransporter = () => {
+  if (transporter) {
+    return transporter;
+  }
+
+  const smtpConfig = {
+    host: process.env.SMTP_HOST || "smtp.gmail.com",
+    port: parseInt(process.env.SMTP_PORT || "587"),
+    secure: process.env.SMTP_SECURE === "true",
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+    },
+  };
+
+  if (!smtpConfig.auth.user || !smtpConfig.auth.pass) {
+    logger.warn("SMTP credentials not configured");
+    return null;
+  }
+
+  transporter = nodemailer.createTransport(smtpConfig);
+  return transporter;
+};
+
+export const sendEmail = async (
+  to: string,
+  subject: string,
+  text: string,
+  html?: string
+): Promise<void> => {
+  const emailTransporter = createTransporter();
+
+  if (!emailTransporter) {
+    logger.warn({ to, subject }, "Email service not configured, skipping email send");
+    return;
+  }
+
+  try {
+    await emailTransporter.sendMail({
+      from: process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER,
+      to,
+      subject,
+      text,
+      html: html || text,
+    });
+
+    logger.info({ to, subject }, "Email sent successfully");
+  } catch (error) {
+    logger.error({ error, to, subject }, "Failed to send email");
+    throw new Error("Failed to send email");
+  }
+};
+
+export const sendOtpEmail = async (email: string, code: string): Promise<void> => {
+  const subject = "Your Nomadly Verification Code";
+  const text = `Your verification code is: ${code}. This code expires in 10 minutes.`;
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #333;">Your Nomadly Verification Code</h2>
+      <p>Your verification code is:</p>
+      <div style="background-color: #f4f4f4; padding: 20px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 5px; margin: 20px 0;">
+        ${code}
+      </div>
+      <p style="color: #666;">This code expires in 10 minutes.</p>
+      <p style="color: #999; font-size: 12px;">If you didn't request this code, please ignore this email.</p>
+    </div>
+  `;
+
+  await sendEmail(email, subject, text, html);
+};
