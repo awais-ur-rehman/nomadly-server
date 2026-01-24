@@ -12,18 +12,18 @@ interface IMessage extends Document {
 const messageSchema = new Schema<IMessage>(
   {
     conversation_id: {
-      type: Schema.Types.ObjectId,
+      type: Schema.Types.ObjectId as any,
       required: true,
       ref: "Conversation",
     },
-    sender_id: { type: Schema.Types.ObjectId, required: true, ref: "User" },
+    sender_id: { type: Schema.Types.ObjectId as any, required: true, ref: "User" },
     message: { type: String, required: true },
     message_type: {
       type: String,
       enum: ["text", "image", "location"],
       default: "text",
     },
-    read_by: [{ type: Schema.Types.ObjectId, ref: "User" }],
+    read_by: [{ type: Schema.Types.ObjectId as any, ref: "User" }],
   },
   {
     timestamps: { createdAt: "timestamp", updatedAt: false },

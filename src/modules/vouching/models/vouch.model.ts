@@ -8,8 +8,8 @@ interface IVouch extends Document {
 
 const vouchSchema = new Schema<IVouch>(
   {
-    voucher_id: { type: Schema.Types.ObjectId, required: true, ref: "User" },
-    vouchee_id: { type: Schema.Types.ObjectId, required: true, ref: "User" },
+    voucher_id: { type: Schema.Types.ObjectId as any, required: true, ref: "User" },
+    vouchee_id: { type: Schema.Types.ObjectId as any, required: true, ref: "User" },
   },
   {
     timestamps: { createdAt: "created_at", updatedAt: false },

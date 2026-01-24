@@ -38,11 +38,11 @@ export class UserController {
 
     const originPoint = {
       type: "Point" as const,
-      coordinates: [origin.lng, origin.lat],
+      coordinates: [origin.lng, origin.lat] as [number, number],
     };
     const destinationPoint = {
       type: "Point" as const,
-      coordinates: [destination.lng, destination.lat],
+      coordinates: [destination.lng, destination.lat] as [number, number],
     };
 
     const user = await this.userService.updateTravelRoute(

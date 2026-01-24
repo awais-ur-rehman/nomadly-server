@@ -1,4 +1,4 @@
-import { type Request, type Response, type NextFunction } from "express";
+import { type Request, type Response } from "express";
 import { AuthService } from "../services/auth.service";
 import { ApiResponse } from "../../../utils/response";
 import { asyncHandler } from "../../../middleware/error-handler";

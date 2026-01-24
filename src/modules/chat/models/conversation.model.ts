@@ -10,7 +10,7 @@ interface IConversation extends Document {
 
 const conversationSchema = new Schema<IConversation>(
   {
-    participants: [{ type: Schema.Types.ObjectId, ref: "User", required: true }],
+    participants: [{ type: Schema.Types.ObjectId as any, ref: "User", required: true }],
     type: {
       type: String,
       enum: ["direct", "group"],

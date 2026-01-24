@@ -1,4 +1,4 @@
-import jwt from "jsonwebtoken";
+import jwt, { type SignOptions } from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import { User } from "../../users/models/user.model";
 import { Otp } from "../models/otp.model";
@@ -187,9 +187,10 @@ export class AuthService {
       throw new Error("JWT_SECRET is not defined");
     }
 
+    const expiresIn = process.env.JWT_EXPIRES_IN || "7d";
     return jwt.sign(payload, jwtSecret, {
-      expiresIn: process.env.JWT_EXPIRES_IN || "7d",
-    });
+      expiresIn: expiresIn,
+    } as SignOptions);
   }
 
   private generateRefreshToken(payload: { userId: string }): string {
@@ -198,8 +199,9 @@ export class AuthService {
       throw new Error("REFRESH_TOKEN_SECRET is not defined");
     }
 
+    const expiresIn = process.env.REFRESH_TOKEN_EXPIRES_IN || "30d";
     return jwt.sign(payload, jwtSecret, {
-      expiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN || "30d",
-    });
+      expiresIn: expiresIn,
+    } as SignOptions);
   }
 }

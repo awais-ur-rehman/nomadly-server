@@ -13,8 +13,8 @@ interface IConsultation extends Document {
 
 const consultationSchema = new Schema<IConsultation>(
   {
-    requester_id: { type: Schema.Types.ObjectId, required: true, ref: "User" },
-    builder_id: { type: Schema.Types.ObjectId, required: true, ref: "User" },
+    requester_id: { type: Schema.Types.ObjectId as any, required: true, ref: "User" },
+    builder_id: { type: Schema.Types.ObjectId as any, required: true, ref: "User" },
     specialty: { type: String, required: true },
     status: {
       type: String,

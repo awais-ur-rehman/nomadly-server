@@ -54,7 +54,7 @@ export class PaymentService {
     logger.info({ userId }, "Subscription deactivated");
   }
 
-  async updateConsultationPayment(consultationId: string, paymentId: string) {
+  async updateConsultationPayment(consultationId: string, paymentId: string): Promise<any> {
     const consultation = await Consultation.findById(consultationId);
     if (!consultation) {
       throw new Error("Consultation not found");

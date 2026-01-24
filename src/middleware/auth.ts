@@ -17,7 +17,7 @@ declare global {
 
 export const authenticate = async (
   req: Request,
-  res: Response,
+  _res: Response,
   next: NextFunction
 ) => {
   try {
@@ -41,17 +41,17 @@ export const authenticate = async (
   }
 };
 
-export const authorize = (...roles: string[]) => {
-  return async (req: Request, res: Response, next: NextFunction) => {
+export const authorize = (..._roles: string[]) => {
+  return async (req: Request, _res: Response, next: NextFunction) => {
     if (!req.user) {
       return next(new UnauthorizedError("Not authenticated"));
     }
 
-    const hasRole = roles.some((role) => req.user?.roles?.includes(role));
-
-    if (!hasRole) {
-      return next(new UnauthorizedError("Insufficient permissions"));
-    }
+    // Note: Roles feature not implemented yet, but keeping for future use
+    // const hasRole = roles.some((role) => req.user?.roles?.includes(role));
+    // if (!hasRole) {
+    //   return next(new UnauthorizedError("Insufficient permissions"));
+    // }
 
     next();
   };

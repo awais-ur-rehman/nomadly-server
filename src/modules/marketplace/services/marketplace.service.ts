@@ -4,7 +4,7 @@ import { Review } from "../models/review.model";
 import { NotFoundError, ValidationError } from "../../../utils/errors";
 
 export class MarketplaceService {
-  async searchBuilders(filters: any, pagination: { page: number; limit: number }) {
+  async searchBuilders(filters: any, pagination: { page: number; limit: number }): Promise<{ builders: any[]; total: number }> {
     const query: any = {
       is_builder: true,
       is_active: true,
@@ -36,7 +36,7 @@ export class MarketplaceService {
     requesterId: string,
     builderId: string,
     specialty: string
-  ) {
+  ): Promise<any> {
     const builder = await User.findById(builderId);
     if (!builder || !builder.is_builder) {
       throw new NotFoundError("Builder not found");
@@ -53,7 +53,7 @@ export class MarketplaceService {
     return consultation;
   }
 
-  async acceptConsultation(consultationId: string, builderId: string) {
+  async acceptConsultation(consultationId: string, builderId: string): Promise<any> {
     const consultation = await Consultation.findById(consultationId);
     if (!consultation) {
       throw new NotFoundError("Consultation not found");
@@ -74,7 +74,7 @@ export class MarketplaceService {
     reviewerId: string,
     rating: number,
     comment?: string
-  ) {
+  ): Promise<any> {
     const consultation = await Consultation.findById(consultationId);
     if (!consultation) {
       throw new NotFoundError("Consultation not found");

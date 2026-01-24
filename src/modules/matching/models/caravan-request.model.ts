@@ -9,8 +9,8 @@ interface ICaravanRequest extends Document {
 
 const caravanRequestSchema = new Schema<ICaravanRequest>(
   {
-    requester_id: { type: Schema.Types.ObjectId, required: true, ref: "User" },
-    target_user_id: { type: Schema.Types.ObjectId, required: true, ref: "User" },
+    requester_id: { type: Schema.Types.ObjectId as any, required: true, ref: "User" },
+    target_user_id: { type: Schema.Types.ObjectId as any, required: true, ref: "User" },
     status: {
       type: String,
       enum: ["pending", "accepted", "rejected"],

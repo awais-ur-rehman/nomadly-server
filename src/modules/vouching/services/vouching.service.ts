@@ -4,7 +4,7 @@ import { Conversation } from "../../chat/models/conversation.model";
 import { ConflictError, ValidationError } from "../../../utils/errors";
 
 export class VouchingService {
-  async createVouch(voucherId: string, voucheeId: string) {
+  async createVouch(voucherId: string, voucheeId: string): Promise<any> {
     if (voucherId === voucheeId) {
       throw new ValidationError("Cannot vouch for yourself");
     }
@@ -46,7 +46,7 @@ export class VouchingService {
     return vouch;
   }
 
-  async getReceivedVouches(userId: string) {
+  async getReceivedVouches(userId: string): Promise<any[]> {
     const vouches = await Vouch.find({ vouchee_id: userId })
       .populate("voucher_id", "profile")
       .sort({ created_at: -1 });

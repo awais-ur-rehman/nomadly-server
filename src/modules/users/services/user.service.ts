@@ -1,9 +1,9 @@
 import { User } from "../models/user.model";
-import { NotFoundError, ValidationError } from "../../../utils/errors";
+import { NotFoundError } from "../../../utils/errors";
 import { type GeospatialPoint } from "../../../types";
 
 export class UserService {
-  async getUserById(userId: string) {
+  async getUserById(userId: string): Promise<any> {
     const user = await User.findById(userId).select("-password_hash");
     if (!user) {
       throw new NotFoundError("User not found");
@@ -77,7 +77,7 @@ export class UserService {
     return userWithoutPassword;
   }
 
-  async searchUsers(filters: any, pagination: { page: number; limit: number }) {
+  async searchUsers(filters: any, pagination: { page: number; limit: number }): Promise<{ users: any[]; total: number }> {
     const query: any = { is_active: true };
 
     if (filters.intent) {

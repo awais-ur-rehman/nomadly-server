@@ -6,10 +6,10 @@ export const errorHandler = (
   err: Error,
   req: Request,
   res: Response,
-  next: NextFunction
+  _next: NextFunction
 ) => {
   if (err instanceof AppError) {
-    return res.status(err.statusCode).json({
+    res.status(err.statusCode).json({
       status: "error",
       message: err.message,
       ...(err instanceof ValidationError && { errors: err.errors }),
@@ -32,6 +32,7 @@ export const errorHandler = (
     status: "error",
     message,
   });
+  return;
 };
 
 export const asyncHandler = (

@@ -12,12 +12,12 @@ interface IReview extends Document {
 const reviewSchema = new Schema<IReview>(
   {
     consultation_id: {
-      type: Schema.Types.ObjectId,
+      type: Schema.Types.ObjectId as any,
       required: true,
       ref: "Consultation",
     },
-    reviewer_id: { type: Schema.Types.ObjectId, required: true, ref: "User" },
-    builder_id: { type: Schema.Types.ObjectId, required: true, ref: "User" },
+    reviewer_id: { type: Schema.Types.ObjectId as any, required: true, ref: "User" },
+    builder_id: { type: Schema.Types.ObjectId as any, required: true, ref: "User" },
     rating: { type: Number, required: true, min: 1, max: 5 },
     comment: { type: String },
   },

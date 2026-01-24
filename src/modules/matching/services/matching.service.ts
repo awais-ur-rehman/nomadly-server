@@ -169,7 +169,7 @@ export class MatchingService {
     return hobbies1.filter((h) => hobbies2.includes(h));
   }
 
-  async swipe(userId: string, matchedUserId: string, action: "left" | "right" | "star") {
+  async swipe(userId: string, matchedUserId: string, action: "left" | "right" | "star"): Promise<any> {
     const existingMatch = await Match.findOne({
       user_id: userId,
       matched_user_id: matchedUserId,

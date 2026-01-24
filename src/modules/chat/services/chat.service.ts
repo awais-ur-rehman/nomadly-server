@@ -3,7 +3,7 @@ import { Message } from "../models/message.model";
 import { NotFoundError } from "../../../utils/errors";
 
 export class ChatService {
-  async getConversations(userId: string) {
+  async getConversations(userId: string): Promise<any[]> {
     const conversations = await Conversation.find({
       participants: userId,
     })
@@ -13,7 +13,7 @@ export class ChatService {
     return conversations;
   }
 
-  async getMessages(conversationId: string, userId: string, pagination: any) {
+  async getMessages(conversationId: string, userId: string, pagination: any): Promise<{ messages: any[]; total: number }> {
     const conversation = await Conversation.findById(conversationId);
     if (!conversation) {
       throw new NotFoundError("Conversation not found");
@@ -42,7 +42,7 @@ export class ChatService {
     senderId: string,
     message: string,
     messageType: "text" | "image" | "location" = "text"
-  ) {
+  ): Promise<any> {
     const conversation = await Conversation.findById(conversationId);
     if (!conversation) {
       throw new NotFoundError("Conversation not found");
@@ -63,7 +63,7 @@ export class ChatService {
     return newMessage;
   }
 
-  async getOrCreateConversation(userId1: string, userId2: string) {
+  async getOrCreateConversation(userId1: string, userId2: string): Promise<any> {
     let conversation = await Conversation.findOne({
       type: "direct",
       participants: { $all: [userId1, userId2] },

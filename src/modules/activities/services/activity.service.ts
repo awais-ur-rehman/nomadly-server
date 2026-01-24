@@ -3,7 +3,7 @@ import { User } from "../../users/models/user.model";
 import { NotFoundError, ValidationError } from "../../../utils/errors";
 
 export class ActivityService {
-  async createActivity(hostId: string, activityData: any) {
+  async createActivity(hostId: string, activityData: any): Promise<any> {
     const activity = await Activity.create({
       ...activityData,
       host_id: hostId,
@@ -18,7 +18,7 @@ export class ActivityService {
   async getNearbyActivities(
     location: { lat: number; lng: number },
     maxDistance: number = 50000
-  ) {
+  ): Promise<any[]> {
     const activities = await Activity.find({
       location: {
         $near: {
@@ -38,7 +38,7 @@ export class ActivityService {
     return activities;
   }
 
-  async requestJoin(activityId: string, userId: string) {
+  async requestJoin(activityId: string, userId: string): Promise<any> {
     const activity = await Activity.findById(activityId);
     if (!activity) {
       throw new NotFoundError("Activity not found");
@@ -73,7 +73,7 @@ export class ActivityService {
     activityId: string,
     hostId: string,
     participantId: string
-  ) {
+  ): Promise<any> {
     const activity = await Activity.findById(activityId);
     if (!activity) {
       throw new NotFoundError("Activity not found");
@@ -109,7 +109,7 @@ export class ActivityService {
     activityId: string,
     hostId: string,
     participantId: string
-  ) {
+  ): Promise<any> {
     const activity = await Activity.findById(activityId);
     if (!activity) {
       throw new NotFoundError("Activity not found");

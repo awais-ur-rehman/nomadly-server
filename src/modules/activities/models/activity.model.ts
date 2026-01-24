@@ -19,7 +19,7 @@ interface IActivity extends Document {
 
 const activitySchema = new Schema<IActivity>(
   {
-    host_id: { type: Schema.Types.ObjectId, required: true, ref: "User" },
+    host_id: { type: Schema.Types.ObjectId as any, required: true, ref: "User" },
     activity_type: { type: String, required: true },
     location: {
       type: {
@@ -33,8 +33,8 @@ const activitySchema = new Schema<IActivity>(
       },
     },
     max_participants: { type: Number, required: true, min: 1 },
-    current_participants: [{ type: Schema.Types.ObjectId, ref: "User" }],
-    pending_requests: [{ type: Schema.Types.ObjectId, ref: "User" }],
+    current_participants: [{ type: Schema.Types.ObjectId as any, ref: "User" }],
+    pending_requests: [{ type: Schema.Types.ObjectId as any, ref: "User" }],
     event_time: { type: Date, required: true },
     description: { type: String },
     verified_only: { type: Boolean, default: false },

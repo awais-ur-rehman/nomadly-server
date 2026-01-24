@@ -3,10 +3,8 @@ import { Server } from "socket.io";
 import { createApp } from "./app";
 import { connectDB, closeDatabase } from "./config/database";
 import { logger } from "./utils/logger";
-import { authenticate } from "./middleware/auth";
 import { ChatService } from "./modules/chat/services/chat.service";
 import { Message } from "./modules/chat/models/message.model";
-import { Conversation } from "./modules/chat/models/conversation.model";
 import jwt from "jsonwebtoken";
 
 const PORT = process.env.PORT || 3000;

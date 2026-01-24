@@ -1,9 +1,10 @@
-import express, { type Request, type Response, type NextFunction } from "express";
+import express, { type Request, type Response } from "express";
 import helmet from "helmet";
 import cors from "cors";
 import compression from "compression";
 import dotenv from "dotenv";
 import swaggerUi from "swagger-ui-express";
+// @ts-ignore - documents folder is excluded from compilation
 import { swaggerSpec } from "../documents/swagger";
 import { errorHandler } from "./middleware/error-handler";
 import { requestLogger } from "./middleware/logger";

@@ -10,8 +10,8 @@ interface IMatch extends Document {
 
 const matchSchema = new Schema<IMatch>(
   {
-    user_id: { type: Schema.Types.ObjectId, required: true, ref: "User" },
-    matched_user_id: { type: Schema.Types.ObjectId, required: true, ref: "User" },
+    user_id: { type: Schema.Types.ObjectId as any, required: true, ref: "User" },
+    matched_user_id: { type: Schema.Types.ObjectId as any, required: true, ref: "User" },
     swipe_action: {
       type: String,
       enum: ["left", "right", "star"],
