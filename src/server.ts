@@ -1,3 +1,6 @@
+import dotenv from "dotenv";
+dotenv.config();
+
 import { createServer } from "http";
 import { Server } from "socket.io";
 import { createApp } from "./app";
@@ -8,6 +11,10 @@ import { Message } from "./modules/chat/models/message.model";
 import jwt from "jsonwebtoken";
 
 const PORT = process.env.PORT || 3000;
+
+console.log("-----------------------------------------");
+console.log("   NOMADLY BACKEND STARTING (v1.0.1)     ");
+console.log("-----------------------------------------");
 
 const app = createApp();
 const httpServer = createServer(app);

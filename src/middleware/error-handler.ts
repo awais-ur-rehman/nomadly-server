@@ -8,31 +8,44 @@ export const errorHandler = (
   res: Response,
   _next: NextFunction
 ) => {
+  const errorMessage = err?.message || "Unknown error";
+  const errorStack = err?.stack || "No stack trace";
+
+  logger.error({
+    error: errorMessage,
+    stack: errorStack,
+    url: req.url,
+    method: req.method,
+  });
+
+  // Also log to console for visibility during development
+  console.error(`\n❌ [${req.method}] ${req.url}`);
+  console.error(`Error Message: ${errorMessage}`);
+  if (process.env.NODE_ENV !== "production") {
+    console.error(`Stack:\n${errorStack}\n`);
+  }
+
+  if (res.headersSent) {
+    return;
+  }
+
   if (err instanceof AppError) {
-    res.status(err.statusCode).json({
+    return res.status(err.statusCode).json({
       status: "error",
       message: err.message,
       ...(err instanceof ValidationError && { errors: err.errors }),
     });
   }
 
-  logger.error({
-    error: err.message,
-    stack: err.stack,
-    url: req.url,
-    method: req.method,
-  });
-
   const message =
     process.env.NODE_ENV === "production"
       ? "Internal server error"
-      : err.message;
+      : errorMessage;
 
-  res.status(500).json({
+  return res.status(500).json({
     status: "error",
     message,
   });
-  return;
 };
 
 export const asyncHandler = (

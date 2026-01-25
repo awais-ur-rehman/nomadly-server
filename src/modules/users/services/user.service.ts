@@ -1,11 +1,16 @@
 import { User } from "../models/user.model";
 import { NotFoundError } from "../../../utils/errors";
 import { type GeospatialPoint } from "../../../types";
+import { logger } from "../../../utils/logger";
 
 export class UserService {
   async getUserById(userId: string): Promise<any> {
+    logger.info({ userId }, "Attempting to fetch user by ID");
     const user = await User.findById(userId).select("-password_hash");
+
     if (!user) {
+      const allUsersCount = await User.countDocuments();
+      logger.error({ userId, totalUsersInDB: allUsersCount }, "User not found in database");
       throw new NotFoundError("User not found");
     }
     return user;
