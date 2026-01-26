@@ -4,49 +4,68 @@ import { ApiResponse } from "../../../utils/response";
 import { asyncHandler } from "../../../middleware/error-handler";
 
 export class MatchingController {
-  constructor(private matchingService: MatchingService) {}
+  constructor(private matchingService: MatchingService) { }
 
-  getDiscovery = asyncHandler(async (req: Request, res: Response) => {
-    if (!req.user) {
-      throw new Error("User not authenticated");
-    }
+  updatePreferences = asyncHandler(async (req: Request, res: Response) => {
+    if (!req.user) throw new Error("User not authenticated");
+    const preferences = await this.matchingService.updatePreferences(req.user.userId, req.body);
+    ApiResponse.success(res, preferences, "Preferences updated");
+  });
 
-    const filters = {
-      intent: req.query.intent ? (req.query.intent as string).split(",") : undefined,
-      rigType: req.query.rig_type as string | undefined,
-      verifiedOnly: req.query.verified_only === "true",
-      maxDistance: req.query.max_distance
-        ? parseInt(req.query.max_distance as string)
-        : undefined,
-    };
+  getRecommendations = asyncHandler(async (req: Request, res: Response) => {
+    if (!req.user) throw new Error("User not authenticated");
 
-    const matches = await this.matchingService.getDiscoveryFeed(
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+
+    const recommendations = await this.matchingService.getRecommendations(
       req.user.userId,
-      filters
+      page,
+      limit
     );
-    ApiResponse.success(res, matches);
+    ApiResponse.success(res, { users: recommendations });
+  });
+
+  // Keep for backward compatibility if needed, maps to getRecommendations
+  getDiscovery = asyncHandler(async (req: Request, res: Response) => {
+    if (!req.user) throw new Error("User not authenticated");
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+
+    const recommendations = await this.matchingService.getRecommendations(
+      req.user.userId,
+      page,
+      limit
+    );
+    ApiResponse.success(res, { users: recommendations });
   });
 
   swipe = asyncHandler(async (req: Request, res: Response) => {
-    if (!req.user) {
-      throw new Error("User not authenticated");
-    }
+    if (!req.user) throw new Error("User not authenticated");
 
-    const { matched_user_id, action } = req.body;
-    const match = await this.matchingService.swipe(
+    const { targetUserId, action } = req.body;
+    // Handle both field names for backward compatibility (matched_user_id vs targetUserId)
+    const targetId = targetUserId || req.body.matched_user_id;
+
+    const result = await this.matchingService.swipe(
       req.user.userId,
-      matched_user_id,
+      targetId,
       action
     );
-    ApiResponse.success(res, match, "Swipe recorded");
+    ApiResponse.success(res, result);
   });
 
-  getMutualMatches = asyncHandler(async (req: Request, res: Response) => {
-    if (!req.user) {
-      throw new Error("User not authenticated");
-    }
+  getMatches = asyncHandler(async (req: Request, res: Response) => {
+    if (!req.user) throw new Error("User not authenticated");
 
-    const matches = await this.matchingService.getMutualMatches(req.user.userId);
-    ApiResponse.success(res, matches);
+    const matches = await this.matchingService.getMatches(req.user.userId);
+    ApiResponse.success(res, { matches });
+  });
+
+  // Alias for backward compatibility
+  getMutualMatches = asyncHandler(async (req: Request, res: Response) => {
+    if (!req.user) throw new Error("User not authenticated");
+    const matches = await this.matchingService.getMatches(req.user.userId);
+    ApiResponse.success(res, { matches });
   });
 }
