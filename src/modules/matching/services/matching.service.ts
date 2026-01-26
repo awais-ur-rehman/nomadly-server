@@ -17,12 +17,18 @@ export class MatchingService {
     }
 
     if (data.intent) user.matching_profile.intent = data.intent;
+
     if (data.preferences) {
-      user.matching_profile.preferences = {
-        ...user.matching_profile.preferences,
-        ...data.preferences,
-      };
+      // Direct assignment needed for Mongoose to detect changes in nested fields
+      if (data.preferences.min_age !== undefined) user.matching_profile.preferences.min_age = data.preferences.min_age;
+      if (data.preferences.max_age !== undefined) user.matching_profile.preferences.max_age = data.preferences.max_age;
+      if (data.preferences.max_distance_km !== undefined) user.matching_profile.preferences.max_distance_km = data.preferences.max_distance_km;
+      if (data.preferences.gender_interest !== undefined) user.matching_profile.preferences.gender_interest = data.preferences.gender_interest;
+
+      // Explicitly mark as modified just in case
+      user.markModified("matching_profile.preferences");
     }
+
     if (data.is_discoverable !== undefined) {
       user.matching_profile.is_discoverable = data.is_discoverable;
     }
@@ -60,6 +66,13 @@ export class MatchingService {
       if (max_age) query["profile.age"].$lte = max_age;
     }
 
+    console.log("DEBUG: Matching - User Profile:", {
+      id: user._id,
+      coords: user.travel_route?.origin?.coordinates,
+      pref: user.matching_profile
+    });
+
+    // Filter by Location (if user has location)
     // Filter by Location (if user has location)
     if (user.travel_route?.origin?.coordinates && max_distance_km > 0) {
       query["travel_route.origin"] = {
@@ -68,7 +81,11 @@ export class MatchingService {
           $maxDistance: max_distance_km * 1000, // Convert km to meters
         },
       };
+    } else {
+      console.log("DEBUG: Matching - Location filter skipped (missing coords or distance=0)");
     }
+
+    console.log("DEBUG: Matching - Final Query:", JSON.stringify(query, null, 2));
 
     const users = await User.find(query)
       .select("profile rig nomad_id travel_route.origin") // Select only needed fields

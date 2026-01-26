@@ -84,6 +84,25 @@ export class UserService {
       user.builder_profile = { ...user.builder_profile, ...updates.builder_profile };
     }
 
+    // Handle matching_profile updates
+    if (updates.matching_profile) {
+      if (updates.matching_profile.intent) {
+        user.matching_profile.intent = updates.matching_profile.intent;
+      }
+      if (updates.matching_profile.is_discoverable !== undefined) {
+        user.matching_profile.is_discoverable = updates.matching_profile.is_discoverable;
+      }
+      if (updates.matching_profile.preferences) {
+        // Explicit assignment for nested fields to ensure Mongoose change detection
+        if (updates.matching_profile.preferences.min_age !== undefined) user.matching_profile.preferences.min_age = updates.matching_profile.preferences.min_age;
+        if (updates.matching_profile.preferences.max_age !== undefined) user.matching_profile.preferences.max_age = updates.matching_profile.preferences.max_age;
+        if (updates.matching_profile.preferences.max_distance_km !== undefined) user.matching_profile.preferences.max_distance_km = updates.matching_profile.preferences.max_distance_km;
+        if (updates.matching_profile.preferences.gender_interest !== undefined) user.matching_profile.preferences.gender_interest = updates.matching_profile.preferences.gender_interest;
+
+        user.markModified("matching_profile.preferences");
+      }
+    }
+
     await user.save();
     const { password_hash, ...userWithoutPassword } = user.toObject();
     return userWithoutPassword;
