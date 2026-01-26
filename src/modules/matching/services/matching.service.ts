@@ -1,235 +1,192 @@
 import { User } from "../../users/models/user.model";
 import { Match } from "../models/match.model";
-import { CaravanRequest } from "../models/caravan-request.model";
+import { Swipe } from "../models/swipe.model";
+import { Conversation } from "../../chat/models/conversation.model";
 import { NotFoundError } from "../../../utils/errors";
+import { io } from "../../../server"; // Import socket instance
 import * as turf from "@turf/turf";
 
 export class MatchingService {
-  async getDiscoveryFeed(userId: string, filters: any) {
+  /**
+   * Update user's matching preferences
+   */
+  async updatePreferences(userId: string, data: any) {
     const user = await User.findById(userId);
-    if (!user || !user.travel_route) {
-      throw new NotFoundError("User or travel route not found");
+    if (!user) {
+      throw new NotFoundError("User not found");
     }
 
-    const swipedUserIds = await Match.find({ user_id: userId }).distinct(
-      "matched_user_id"
-    );
+    if (data.intent) user.matching_profile.intent = data.intent;
+    if (data.preferences) {
+      user.matching_profile.preferences = {
+        ...user.matching_profile.preferences,
+        ...data.preferences,
+      };
+    }
+    if (data.is_discoverable !== undefined) {
+      user.matching_profile.is_discoverable = data.is_discoverable;
+    }
 
+    await user.save();
+    return user.matching_profile;
+  }
+
+  /**
+   * Get recommendations (Discovery Feed)
+   */
+  async getRecommendations(userId: string, page: number = 1, limit: number = 10) {
+    const user = await User.findById(userId);
+    if (!user) throw new NotFoundError("User not found");
+
+    // Get IDs of users already swiped on
+    const swipedUserIds = await Swipe.find({ actor_id: userId }).distinct("target_id");
+
+    // Build query based on preferences
     const query: any = {
-      _id: { $ne: userId },
-      is_active: true,
-      travel_route: { $exists: true },
-      "travel_route.origin": { $exists: true },
-      "travel_route.destination": { $exists: true },
+      _id: { $ne: userId, $nin: swipedUserIds }, // Exclude self and swiped users
+      "matching_profile.is_discoverable": true, // Only show discoverable users
     };
 
-    if (filters.intent) {
-      query["profile.intent"] = { $in: filters.intent };
-    }
-    if (filters.rigType) {
-      query["rig.type"] = filters.rigType;
-    }
-    if (filters.verifiedOnly) {
-      query["nomad_id.verified"] = true;
+    // Filter by Intent
+    if (user.matching_profile.intent !== "both") {
+      query["matching_profile.intent"] = { $in: [user.matching_profile.intent, "both"] };
     }
 
-    if (swipedUserIds.length > 0) {
-      query._id = { $ne: userId, $nin: swipedUserIds };
-    } else {
-      query._id = { $ne: userId };
+    // Filter by Age
+    const { min_age, max_age, max_distance_km } = user.matching_profile.preferences;
+    if (min_age || max_age) {
+      query["profile.age"] = {};
+      if (min_age) query["profile.age"].$gte = min_age;
+      if (max_age) query["profile.age"].$lte = max_age;
     }
 
-    const maxDistance = filters.maxDistance || 50000;
-
-    const nearbyUsers = await User.find({
-      ...query,
-      "travel_route.origin": {
+    // Filter by Location (if user has location)
+    if (user.travel_route?.origin?.coordinates && max_distance_km > 0) {
+      query["travel_route.origin"] = {
         $near: {
           $geometry: user.travel_route.origin,
-          $maxDistance: maxDistance,
+          $maxDistance: max_distance_km * 1000, // Convert km to meters
         },
-      },
-    }).limit(50);
-
-    const matches = await this.calculateMatches(user, nearbyUsers);
-
-    return matches.sort((a, b) => b.score - a.score);
-  }
-
-  private async calculateMatches(
-    currentUser: any,
-    potentialMatches: any[]
-  ): Promise<any[]> {
-    const matches = [];
-
-    for (const user of potentialMatches) {
-      if (!user.travel_route) continue;
-
-      const intersection = this.calculateRouteIntersection(
-        currentUser.travel_route,
-        user.travel_route
-      );
-
-      if (!intersection) continue;
-
-      const dateOverlap = this.checkDateOverlap(
-        currentUser.travel_route,
-        user.travel_route
-      );
-
-      if (!dateOverlap) continue;
-
-      const distance = this.calculateDistance(
-        currentUser.travel_route.origin,
-        intersection
-      );
-
-      const hobbyScore = this.calculateHobbyScore(
-        currentUser.profile.hobbies || [],
-        user.profile.hobbies || []
-      );
-
-      const verificationBonus = user.nomad_id.verified ? 10 : 0;
-
-      const score =
-        100 - distance / 1000 + hobbyScore * 5 + verificationBonus;
-
-      matches.push({
-        user: {
-          id: user._id,
-          profile: user.profile,
-          rig: user.rig,
-          nomad_id: user.nomad_id,
-        },
-        intersection,
-        distance: Math.round(distance / 1000),
-        score: Math.round(score),
-        commonHobbies: this.getCommonHobbies(
-          currentUser.profile.hobbies || [],
-          user.profile.hobbies || []
-        ),
-      });
+      };
     }
 
-    return matches;
-  }
+    const users = await User.find(query)
+      .select("profile rig nomad_id travel_route.origin") // Select only needed fields
+      .limit(limit)
+      .skip((page - 1) * limit);
 
-  private calculateRouteIntersection(route1: any, route2: any): any | null {
-    try {
-      const line1 = turf.lineString([
-        route1.origin.coordinates,
-        route1.destination.coordinates,
-      ]);
-      const line2 = turf.lineString([
-        route2.origin.coordinates,
-        route2.destination.coordinates,
-      ]);
-
-      const intersection = turf.lineIntersect(line1, line2);
-
-      if (intersection.features.length > 0) {
-        const point = intersection.features[0].geometry.coordinates;
-        return {
-          type: "Point",
-          coordinates: point,
-        };
+    // Map to simple response format
+    return users.map(u => {
+      // Calculate distance if possible
+      let distance_km = null;
+      if (user.travel_route?.origin && u.travel_route?.origin) {
+        const from = turf.point(user.travel_route.origin.coordinates);
+        const to = turf.point(u.travel_route.origin.coordinates);
+        distance_km = Math.round(turf.distance(from, to, { units: "kilometers" }));
       }
 
-      return null;
-    } catch (error) {
-      return null;
-    }
+      return {
+        _id: u._id,
+        username: u.username,
+        profile: u.profile,
+        nomad_id: u.nomad_id,
+        distance_km
+      };
+    });
   }
 
-  private checkDateOverlap(route1: any, route2: any): boolean {
-    const start1 = new Date(route1.start_date);
-    const end1 = new Date(
-      start1.getTime() + route1.duration_days * 24 * 60 * 60 * 1000
-    );
-    const start2 = new Date(route2.start_date);
-    const end2 = new Date(
-      start2.getTime() + route2.duration_days * 24 * 60 * 60 * 1000
-    );
-
-    return start1 <= end2 && start2 <= end1;
-  }
-
-  private calculateDistance(point1: any, point2: any): number {
-    const from = turf.point(point1.coordinates);
-    const to = turf.point(point2.coordinates);
-    return turf.distance(from, to, { units: "meters" });
-  }
-
-  private calculateHobbyScore(hobbies1: string[], hobbies2: string[]): number {
-    const common = hobbies1.filter((h) => hobbies2.includes(h));
-    return common.length;
-  }
-
-  private getCommonHobbies(hobbies1: string[], hobbies2: string[]): string[] {
-    return hobbies1.filter((h) => hobbies2.includes(h));
-  }
-
-  async swipe(userId: string, matchedUserId: string, action: "left" | "right" | "star"): Promise<any> {
-    const existingMatch = await Match.findOne({
-      user_id: userId,
-      matched_user_id: matchedUserId,
+  /**
+   * Record a swipe action
+   */
+  async swipe(actorId: string, targetUserId: string, action: "like" | "pass" | "super_like") {
+    // 1. Record the swipe
+    await Swipe.create({
+      actor_id: actorId,
+      target_id: targetUserId,
+      action
     });
 
-    if (existingMatch) {
-      existingMatch.swipe_action = action;
-      await existingMatch.save();
-      return existingMatch;
+    // If pass, just return
+    if (action === "pass") {
+      return { isMatch: false };
     }
 
-    const match = await Match.create({
-      user_id: userId,
-      matched_user_id: matchedUserId,
-      swipe_action: action,
+    // If like/super_like, check for mutual match
+    const reciprocalSwipe = await Swipe.findOne({
+      actor_id: targetUserId,
+      target_id: actorId,
+      action: { $in: ["like", "super_like"] }
     });
 
-    if (action === "right" || action === "star") {
-      const mutualMatch = await Match.findOne({
-        user_id: matchedUserId,
-        matched_user_id: userId,
-        swipe_action: { $in: ["right", "star"] },
+    if (reciprocalSwipe) {
+      // IT'S A MATCH! 🎉
+
+      // 1. Create Conversation
+      const conversation = await Conversation.create({
+        participants: [actorId, targetUserId],
+        type: "direct", // or "match" if supported
+        last_message: "New Match! Say hi 👋",
+        last_message_time: new Date()
       });
 
-      if (mutualMatch) {
-        match.is_mutual = true;
-        mutualMatch.is_mutual = true;
-        await match.save();
-        await mutualMatch.save();
+      // 2. Create Match record
+      const match = await Match.create({
+        users: [actorId, targetUserId].sort(), // Sort for consistent querying
+        initiated_by: actorId,
+        conversation_id: conversation._id
+      });
+
+      // 3. Get User Details for response
+      const matchedUser = await User.findById(targetUserId)
+        .select("username profile.name profile.photo_url");
+
+      // 4. Emit Socket Event to the OTHER user (targetUserId)
+      const actorUser = await User.findById(actorId).select("username profile.name profile.photo_url");
+
+      if (io) {
+        io.to(targetUserId).emit("match_new", {
+          match_id: match._id,
+          conversation_id: conversation._id,
+          partner: actorUser
+        });
       }
+
+      return {
+        isMatch: true,
+        match: {
+          _id: match._id,
+          conversation_id: conversation._id,
+          user: matchedUser
+        }
+      };
     }
 
-    if (action === "star") {
-      await CaravanRequest.findOneAndUpdate(
-        {
-          requester_id: userId,
-          target_user_id: matchedUserId,
-        },
-        {
-          requester_id: userId,
-          target_user_id: matchedUserId,
-          status: "pending",
-        },
-        { upsert: true, new: true }
-      );
-    }
-
-    return match;
+    return { isMatch: false };
   }
 
-  async getMutualMatches(userId: string) {
+  /**
+   * Get list of matches
+   */
+  async getMatches(userId: string) {
     const matches = await Match.find({
-      user_id: userId,
-      is_mutual: true,
-    }).populate("matched_user_id", "profile rig nomad_id");
+      users: userId
+    })
+      .sort({ created_at: -1 })
+      .populate("conversation_id");
 
-    return matches.map((match) => ({
-      matchId: match._id,
-      user: match.matched_user_id,
-      createdAt: match.created_at,
+    // Populate the OTHER user in the match
+    const populatedMatches = await Promise.all(matches.map(async (match) => {
+      const otherUserId = match.users.find(id => id.toString() !== userId);
+      const otherUser = await User.findById(otherUserId).select("username profile.name profile.photo_url nomad_id");
+
+      return {
+        matchId: match._id,
+        conversation_id: match.conversation_id,
+        user: otherUser,
+        matchedAt: match.created_at
+      };
     }));
+
+    return populatedMatches;
   }
 }

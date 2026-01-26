@@ -96,5 +96,14 @@ export const createUserRoutes = (userController: UserController) => {
   router.get("/search", authenticate, userController.searchUsers);
   router.patch("/toggle-builder", authenticate, userController.toggleBuilderStatus);
 
+  // User profile
+  router.get("/:userId", authenticate, userController.getUserById);
+
+  // Follow routes
+  router.post("/:userId/follow", authenticate, userController.followUser);
+  router.delete("/:userId/follow", authenticate, userController.unfollowUser);
+  router.get("/:userId/followers", userController.getFollowers);
+  router.get("/:userId/following", userController.getFollowing);
+
   return router;
 };

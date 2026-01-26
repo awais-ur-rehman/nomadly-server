@@ -13,6 +13,12 @@ export const validate = (schema: AnyZodObject) => {
       next();
     } catch (error) {
       if (error instanceof ZodError) {
+        // RICH DEBUG LOGGING FOR USER
+        console.error("\n❌ VALIDATION ERROR DETECTED ❌");
+        console.error(`Endpoint: [${req.method}] ${req.originalUrl}`);
+        console.error("Request Body:", JSON.stringify(req.body, null, 2));
+        console.error("Zod Issues:", JSON.stringify(error.errors, null, 2));
+
         const errors = error.errors.map((err) => ({
           field: err.path.join("."),
           message: err.message,

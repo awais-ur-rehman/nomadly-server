@@ -4,16 +4,44 @@ import { ApiResponse } from "../../../utils/response";
 import { asyncHandler } from "../../../middleware/error-handler";
 
 export class ActivityController {
-  constructor(private activityService: ActivityService) {}
+  constructor(private activityService: ActivityService) { }
 
   createActivity = asyncHandler(async (req: Request, res: Response) => {
     if (!req.user) {
       throw new Error("User not authenticated");
     }
 
+    const {
+      activity_type, type,
+      location,
+      max_participants, maxParticipants,
+      event_time, startTime,
+      description, title,
+      verified_only
+    } = req.body;
+
+    const finalDescription = title && description
+      ? `${title}\n\n${description}`
+      : (description || title);
+
+    const payload = {
+      activity_type: activity_type || type,
+      location: {
+        type: "Point" as const,
+        coordinates: [
+          Number(location.lng || location.longitude),
+          Number(location.lat || location.latitude)
+        ] as [number, number]
+      },
+      max_participants: max_participants || maxParticipants,
+      event_time: event_time || startTime,
+      description: finalDescription,
+      verified_only
+    };
+
     const activity = await this.activityService.createActivity(
       req.user.userId,
-      req.body
+      payload
     );
     ApiResponse.success(res, activity, "Activity created successfully", 201);
   });

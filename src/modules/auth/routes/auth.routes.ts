@@ -10,6 +10,9 @@ const registerSchema = z.object({
   body: z.object({
     email: z.string().email(),
     password: z.string().min(8),
+    username: z.string().min(3).max(30).regex(/^[a-zA-Z0-9_]+$/, {
+      message: "Username can only contain letters, numbers, and underscores"
+    }).optional(),
     name: z.string().min(1),
     phone: z.string().optional(),
     age: z.number().optional(),
@@ -26,8 +29,13 @@ const verifyOtpSchema = z.object({
 
 const loginSchema = z.object({
   body: z.object({
-    email: z.string().email(),
+    identifier: z.string().min(1).optional(),
+    email: z.string().email().optional(),
+    username: z.string().optional(),
     password: z.string().min(1),
+  }).refine((data) => data.identifier || data.email || data.username, {
+    message: "Either identifier, email, or username must be provided",
+    path: ["identifier"],
   }),
 });
 
@@ -40,6 +48,20 @@ const refreshTokenSchema = z.object({
 const resendOtpSchema = z.object({
   body: z.object({
     email: z.string().email(),
+  }),
+});
+
+const forgotPasswordSchema = z.object({
+  body: z.object({
+    email: z.string().email(),
+  }),
+});
+
+const resetPasswordSchema = z.object({
+  body: z.object({
+    email: z.string().email(),
+    otp: z.string().length(6),
+    newPassword: z.string().min(8),
   }),
 });
 
@@ -71,6 +93,20 @@ export const createAuthRoutes = (authController: AuthController) => {
     otpLimiter,
     validate(resendOtpSchema),
     authController.resendOtp
+  );
+
+  router.post(
+    "/forgot-password",
+    otpLimiter,
+    validate(forgotPasswordSchema),
+    authController.forgotPassword
+  );
+
+  router.post(
+    "/reset-password",
+    authLimiter,
+    validate(resetPasswordSchema),
+    authController.resetPassword
   );
 
   return router;

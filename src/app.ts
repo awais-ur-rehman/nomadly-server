@@ -9,6 +9,7 @@ import { errorHandler } from "./middleware/error-handler";
 import { requestLogger } from "./middleware/logger";
 import { apiLimiter } from "./middleware/rate-limit";
 
+// Routes
 import { createAuthRoutes } from "./modules/auth/routes/auth.routes";
 import { createUserRoutes } from "./modules/users/routes/user.routes";
 import { createMatchingRoutes } from "./modules/matching/routes/matching.routes";
@@ -19,7 +20,10 @@ import { createVouchingRoutes } from "./modules/vouching/routes/vouching.routes"
 import { createPaymentRoutes } from "./modules/payments/routes/payment.routes";
 import { createNotificationRoutes } from "./modules/notifications/routes/notification.routes";
 import { createUploadRoutes } from "./modules/upload/routes/upload.routes";
+import { createFeedRoutes } from "./modules/feed/routes/feed.routes";
+import { createStoryRoutes } from "./modules/stories/routes/story.routes";
 
+// Services
 import { AuthService } from "./modules/auth/services/auth.service";
 import { UserService } from "./modules/users/services/user.service";
 import { MatchingService } from "./modules/matching/services/matching.service";
@@ -30,7 +34,10 @@ import { VouchingService } from "./modules/vouching/services/vouching.service";
 import { PaymentService } from "./modules/payments/services/payment.service";
 import { NotificationService } from "./modules/notifications/services/notification.service";
 import { UploadService } from "./modules/upload/services/upload.service";
+import { FeedService } from "./modules/feed/services/feed.service";
+import { StoryService } from "./modules/stories/services/story.service";
 
+// Controllers
 import { AuthController } from "./modules/auth/controllers/auth.controller";
 import { UserController } from "./modules/users/controllers/user.controller";
 import { MatchingController } from "./modules/matching/controllers/matching.controller";
@@ -41,10 +48,13 @@ import { VouchingController } from "./modules/vouching/controllers/vouching.cont
 import { PaymentController } from "./modules/payments/controllers/payment.controller";
 import { NotificationController } from "./modules/notifications/controllers/notification.controller";
 import { UploadController } from "./modules/upload/controllers/upload.controller";
+import { FeedController } from "./modules/feed/controllers/feed.controller";
+import { StoryController } from "./modules/stories/controllers/story.controller";
 
 export const createApp = () => {
   const app = express();
 
+  // Security middleware
   app.use(helmet());
   app.use(
     cors({
@@ -58,15 +68,18 @@ export const createApp = () => {
   app.use(requestLogger);
   app.use(apiLimiter);
 
+  // Health check endpoint
   app.get("/health", (_req: Request, res: Response) => {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
   });
 
+  // Swagger API documentation
   app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
     customCss: ".swagger-ui .topbar { display: none }",
     customSiteTitle: "Nomadly API Documentation",
   }));
 
+  // Initialize services
   const authService = new AuthService();
   const userService = new UserService();
   const matchingService = new MatchingService();
@@ -77,7 +90,10 @@ export const createApp = () => {
   const paymentService = new PaymentService();
   const notificationService = new NotificationService();
   const uploadService = new UploadService();
+  const feedService = new FeedService();
+  const storyService = new StoryService();
 
+  // Initialize controllers
   const authController = new AuthController(authService);
   const userController = new UserController(userService);
   const matchingController = new MatchingController(matchingService);
@@ -88,7 +104,25 @@ export const createApp = () => {
   const paymentController = new PaymentController(paymentService);
   const notificationController = new NotificationController(notificationService);
   const uploadController = new UploadController(uploadService);
+  const feedController = new FeedController(feedService);
+  const storyController = new StoryController(storyService);
 
+  // API v1 Routes (new versioned API)
+  app.use("/api/v1/auth", createAuthRoutes(authController));
+  app.use("/api/v1/users", createUserRoutes(userController));
+  app.use("/api/v1/discovery", createMatchingRoutes(matchingController));
+  app.use("/api/v1/matching", createMatchingRoutes(matchingController));
+  app.use("/api/v1/beacons", createActivityRoutes(activityController));
+  app.use("/api/v1/marketplace", createMarketplaceRoutes(marketplaceController));
+  app.use("/api/v1/chat", createChatRoutes(chatController));
+  app.use("/api/v1/vouch", createVouchingRoutes(vouchingController));
+  app.use("/api/v1/payments", createPaymentRoutes(paymentController));
+  app.use("/api/v1/notifications", createNotificationRoutes(notificationController));
+  app.use("/api/v1/upload", createUploadRoutes(uploadController));
+  app.use("/api/v1/feed", createFeedRoutes(feedController));
+  app.use("/api/v1/stories", createStoryRoutes(storyController));
+
+  // Legacy API Routes (backward compatibility)
   app.use("/api/auth", createAuthRoutes(authController));
   app.use("/api/users", createUserRoutes(userController));
   app.use("/api/matches", createMatchingRoutes(matchingController));
@@ -99,7 +133,11 @@ export const createApp = () => {
   app.use("/api/payments", createPaymentRoutes(paymentController));
   app.use("/api/notifications", createNotificationRoutes(notificationController));
   app.use("/api/upload", createUploadRoutes(uploadController));
+  app.use("/api/feed", createFeedRoutes(feedController));
+  app.use("/api/stories", createStoryRoutes(storyController));
+  app.use("/api/beacons", createActivityRoutes(activityController));
 
+  // 404 handler
   app.use((_req: Request, res: Response) => {
     res.status(404).json({
       status: "error",
@@ -107,6 +145,7 @@ export const createApp = () => {
     });
   });
 
+  // Global error handler
   app.use(errorHandler);
 
   return app;

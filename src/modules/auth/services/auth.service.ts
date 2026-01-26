@@ -1,35 +1,46 @@
 import jwt, { type SignOptions } from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import { User } from "../../users/models/user.model";
-import { Otp } from "../models/otp.model";
 import {
   UnauthorizedError,
   ValidationError,
   ConflictError,
+  NotFoundError,
 } from "../../../utils/errors";
 import { logger } from "../../../utils/logger";
 import { sendOtpEmail } from "../../../utils/email";
+import { storeOtp, getOtp, deleteOtp } from "../../../config/redis";
 
 export class AuthService {
   async register(
     email: string,
     password: string,
+    username: string,
     name: string,
     phone?: string,
     age?: number,
     gender?: string
   ) {
-    const existingUser = await User.findOne({ email: email.toLowerCase() });
-    if (existingUser) {
+    // Check if email already exists
+    const existingEmail = await User.findOne({ email: email.toLowerCase() });
+    if (existingEmail) {
       throw new ConflictError("Email already exists");
+    }
+
+    // Check if username already exists
+    const existingUsername = await User.findOne({ username: username.toLowerCase() });
+    if (existingUsername) {
+      throw new ConflictError("Username already taken");
     }
 
     const passwordHash = await bcrypt.hash(password, 12);
 
     const user = await User.create({
+      username: username.toLowerCase(),
       email: email.toLowerCase(),
       password_hash: passwordHash,
       phone: phone,
+      is_private: false,
       profile: {
         name: name,
         age: age,
@@ -60,35 +71,32 @@ export class AuthService {
     return {
       userId: user._id.toString(),
       email: user.email,
+      username: user.username,
       isActive: user.is_active,
+      requiresVerification: true,
     };
   }
 
   async sendOtp(email: string) {
     const code = Math.floor(100000 + Math.random() * 900000).toString();
 
-    await Otp.create({
-      email: email.toLowerCase(),
-      code,
-      expiresAt: new Date(Date.now() + 10 * 60 * 1000),
-    });
+    // Store OTP in Redis with 5-minute TTL (handled by storeOtp)
+    await storeOtp(email, code);
 
     try {
       await sendOtpEmail(email, code);
+      logger.info({ email }, "OTP sent successfully");
     } catch (error) {
-      logger.error({ error }, "Failed to send OTP email");
+      logger.error({ error, email }, "Failed to send OTP email");
       throw new Error("Failed to send OTP email");
     }
   }
 
   async verifyOtp(email: string, code: string) {
-    const otp = await Otp.findOne({
-      email: email.toLowerCase(),
-      code,
-      expiresAt: { $gt: new Date() },
-    });
+    // Get OTP from Redis
+    const storedOtp = await getOtp(email);
 
-    if (!otp) {
+    if (!storedOtp || storedOtp !== code) {
       throw new ValidationError("Invalid or expired OTP code");
     }
 
@@ -100,25 +108,34 @@ export class AuthService {
     user.is_active = true;
     await user.save();
 
-    await Otp.deleteOne({ _id: otp._id });
+    // Delete OTP from Redis after successful verification
+    await deleteOtp(email);
 
     const tokens = this.generateTokens({
       userId: user._id.toString(),
       email: user.email,
     });
 
+    const { password_hash, ...userWithoutPassword } = user.toObject();
+
     return {
       ...tokens,
       user: {
+        ...userWithoutPassword,
         id: user._id.toString(),
-        email: user.email,
-        isActive: user.is_active,
       },
     };
   }
 
-  async login(email: string, password: string) {
-    const user = await User.findOne({ email: email.toLowerCase() });
+  async login(identifier: string, password: string) {
+    // Support login with email or username
+    const user = await User.findOne({
+      $or: [
+        { email: identifier.toLowerCase() },
+        { username: identifier.toLowerCase() },
+      ],
+    });
+
     if (!user) {
       throw new UnauthorizedError("Invalid credentials");
     }
@@ -137,14 +154,49 @@ export class AuthService {
       email: user.email,
     });
 
+    const { password_hash, ...userWithoutPassword } = user.toObject();
+
     return {
       ...tokens,
       user: {
+        ...userWithoutPassword,
         id: user._id.toString(),
-        email: user.email,
-        isActive: user.is_active,
       },
     };
+  }
+
+  async forgotPassword(email: string) {
+    const user = await User.findOne({ email: email.toLowerCase() });
+    if (!user) {
+      // Don't reveal if user exists for security
+      return { message: "If the email exists, OTP has been sent" };
+    }
+
+    await this.sendOtp(email);
+    return { message: "OTP sent successfully" };
+  }
+
+  async resetPassword(email: string, otp: string, newPassword: string) {
+    const storedOtp = await getOtp(email);
+
+    if (!storedOtp || storedOtp !== otp) {
+      throw new ValidationError("Invalid or expired OTP code");
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase() });
+    if (!user) {
+      throw new NotFoundError("User not found");
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 12);
+    user.password_hash = passwordHash;
+    await user.save();
+
+    // Delete OTP after successful reset
+    await deleteOtp(email);
+
+    logger.info({ userId: user._id }, "Password reset successfully");
+    return { message: "Password reset successfully" };
   }
 
   async refreshToken(refreshToken: string) {
