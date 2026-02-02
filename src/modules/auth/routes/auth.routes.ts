@@ -17,6 +17,7 @@ const registerSchema = z.object({
     phone: z.string().optional(),
     age: z.number().optional(),
     gender: z.string().optional(),
+    invite_code: z.string().min(1, "Invite code is required"),
   }),
 });
 

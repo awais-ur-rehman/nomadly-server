@@ -10,6 +10,7 @@ import {
 import { logger } from "../../../utils/logger";
 import { sendOtpEmail } from "../../../utils/email";
 import { storeOtp, getOtp, deleteOtp } from "../../../config/redis";
+import { InviteService } from "../../invite/services/invite.service";
 
 export class AuthService {
   async register(
@@ -19,8 +20,16 @@ export class AuthService {
     name: string,
     phone?: string,
     age?: number,
-    gender?: string
+    gender?: string,
+    inviteCode?: string
   ) {
+    // Validate invite code FIRST before creating anything
+    const inviteService = new InviteService();
+    if (!inviteCode) {
+      throw new ValidationError("Invite code is required to join Nomadly");
+    }
+    await inviteService.validateCode(inviteCode);
+
     // Check if email already exists
     const existingEmail = await User.findOne({ email: email.toLowerCase() });
     if (existingEmail) {
@@ -66,6 +75,11 @@ export class AuthService {
       is_active: false,
     });
 
+    // Redeem the invite code and link the inviter
+    const inviterId = await inviteService.redeemCode(inviteCode, user._id.toString());
+    user.invited_by = inviterId;
+    await user.save();
+
     await this.sendOtp(email);
 
     return {
@@ -74,6 +88,7 @@ export class AuthService {
       username: user.username,
       isActive: user.is_active,
       requiresVerification: true,
+      invited_by: inviterId,
     };
   }
 

@@ -55,6 +55,8 @@ export interface IUser extends Document {
     };
     is_discoverable: boolean;
   };
+  invited_by?: string;
+  invite_count: number;
   is_active: boolean;
   created_at: Date;
   updated_at: Date;
@@ -167,6 +169,8 @@ const userSchema = new Schema<IUser>(
       },
       is_discoverable: { type: Boolean, default: true },
     },
+    invited_by: { type: Schema.Types.ObjectId as any, ref: "User" },
+    invite_count: { type: Number, default: 0 },
     is_active: { type: Boolean, default: false },
   },
   {

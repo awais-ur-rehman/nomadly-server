@@ -24,6 +24,7 @@ import { createUploadRoutes } from "./modules/upload/routes/upload.routes";
 import { createFeedRoutes } from "./modules/feed/routes/feed.routes";
 import { createStoryRoutes } from "./modules/stories/routes/story.routes";
 import { createSafetyRoutes } from "./modules/safety/routes/safety.routes";
+import { createInviteRoutes } from "./modules/invite/routes/invite.routes";
 
 // Services
 import { AuthService } from "./modules/auth/services/auth.service";
@@ -39,6 +40,7 @@ import { UploadService } from "./modules/upload/services/upload.service";
 import { FeedService } from "./modules/feed/services/feed.service";
 import { StoryService } from "./modules/stories/services/story.service";
 import { SafetyService } from "./modules/safety/services/safety.service";
+import { InviteService } from "./modules/invite/services/invite.service";
 
 // Controllers
 import { AuthController } from "./modules/auth/controllers/auth.controller";
@@ -54,6 +56,7 @@ import { UploadController } from "./modules/upload/controllers/upload.controller
 import { FeedController } from "./modules/feed/controllers/feed.controller";
 import { StoryController } from "./modules/stories/controllers/story.controller";
 import { SafetyController } from "./modules/safety/controllers/safety.controller";
+import { InviteController } from "./modules/invite/controllers/invite.controller";
 
 export const createApp = () => {
   const app = express();
@@ -121,6 +124,7 @@ export const createApp = () => {
   const feedService = new FeedService();
   const storyService = new StoryService();
   const safetyService = new SafetyService();
+  const inviteService = new InviteService();
 
   // Initialize controllers
   const authController = new AuthController(authService);
@@ -136,6 +140,7 @@ export const createApp = () => {
   const feedController = new FeedController(feedService);
   const storyController = new StoryController(storyService);
   const safetyController = new SafetyController(safetyService);
+  const inviteController = new InviteController(inviteService);
 
   // API v1 Routes (new versioned API)
   app.use("/api/v1/auth", createAuthRoutes(authController));
@@ -152,6 +157,7 @@ export const createApp = () => {
   app.use("/api/v1/feed", createFeedRoutes(feedController));
   app.use("/api/v1/stories", createStoryRoutes(storyController));
   app.use("/api/v1/safety", createSafetyRoutes(safetyController));
+  app.use("/api/v1/invite", createInviteRoutes(inviteController));
 
   // Legacy API Routes (backward compatibility)
   app.use("/api/auth", createAuthRoutes(authController));
@@ -168,6 +174,7 @@ export const createApp = () => {
   app.use("/api/stories", createStoryRoutes(storyController));
   app.use("/api/beacons", createActivityRoutes(activityController));
   app.use("/api/safety", createSafetyRoutes(safetyController));
+  app.use("/api/invite", createInviteRoutes(inviteController));
 
   // 404 handler
   app.use((_req: Request, res: Response) => {

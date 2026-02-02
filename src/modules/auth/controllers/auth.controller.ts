@@ -7,7 +7,7 @@ export class AuthController {
   constructor(private authService: AuthService) { }
 
   register = asyncHandler(async (req: Request, res: Response) => {
-    let { email, password, username, name, phone, age, gender } = req.body;
+    let { email, password, username, name, phone, age, gender, invite_code } = req.body;
 
     // Generate username if not provided (backward compatibility)
     if (!username) {
@@ -23,7 +23,8 @@ export class AuthController {
       name,
       phone,
       age,
-      gender
+      gender,
+      invite_code
     );
     ApiResponse.success(res, result, "Registration successful. Please verify your email.", 201);
   });
