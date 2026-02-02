@@ -3,6 +3,7 @@ import { z } from "zod";
 import { MatchingController } from "../controllers/matching.controller";
 import { validate } from "../../../middleware/validation";
 import { authenticate } from "../../../middleware/auth";
+import { swipeLimiter } from "../../../middleware/rate-limit";
 
 const router = Router();
 
@@ -39,7 +40,7 @@ export const createMatchingRoutes = (matchingController: MatchingController) => 
   router.get("/discovery", authenticate, matchingController.getDiscovery);
 
   // Actions
-  router.post("/swipe", authenticate, validate(swipeSchema), matchingController.swipe);
+  router.post("/swipe", authenticate, swipeLimiter, validate(swipeSchema), matchingController.swipe);
 
   // Matches List
   router.get("/matches", authenticate, matchingController.getMatches);

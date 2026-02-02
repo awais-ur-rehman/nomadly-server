@@ -4,7 +4,7 @@ import { ApiResponse } from "../../../utils/response";
 import { asyncHandler } from "../../../middleware/error-handler";
 
 export class ChatController {
-  constructor(private chatService: ChatService) {}
+  constructor(private chatService: ChatService) { }
 
   getConversations = asyncHandler(async (req: Request, res: Response) => {
     if (!req.user) {
@@ -63,6 +63,27 @@ export class ChatController {
     );
 
     ApiResponse.success(res, conversation);
+  });
+
+  createConversation = asyncHandler(async (req: Request, res: Response) => {
+    if (!req.user) {
+      throw new Error("User not authenticated");
+    }
+
+    // Support both targetUserId (standard) or other common names
+    const { targetUserId, userId, participantId } = req.body;
+    const targetId = targetUserId || userId || participantId;
+
+    if (!targetId) {
+      throw new Error("Target user ID is required");
+    }
+
+    const conversation = await this.chatService.getOrCreateConversation(
+      req.user.userId,
+      targetId
+    );
+
+    ApiResponse.success(res, conversation, "Conversation created", 201);
   });
 
   markAsRead = asyncHandler(async (req: Request, res: Response) => {

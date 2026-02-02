@@ -1,6 +1,7 @@
 import { Conversation } from "../models/conversation.model";
 import { Message } from "../models/message.model";
-import { NotFoundError } from "../../../utils/errors";
+import { Block } from "../../safety/models/block.model";
+import { NotFoundError, ForbiddenError } from "../../../utils/errors";
 
 export class ChatService {
   async getConversations(userId: string): Promise<any[]> {
@@ -48,6 +49,22 @@ export class ChatService {
       throw new NotFoundError("Conversation not found");
     }
 
+    // Check if either participant has blocked the other
+    const otherUserId = conversation.participants.find(
+      (p: any) => p.toString() !== senderId
+    );
+    if (otherUserId) {
+      const blocked = await Block.findOne({
+        $or: [
+          { blocker_id: senderId, blocked_id: otherUserId },
+          { blocker_id: otherUserId, blocked_id: senderId },
+        ],
+      });
+      if (blocked) {
+        throw new ForbiddenError("Cannot send messages in this conversation");
+      }
+    }
+
     const newMessage = await Message.create({
       conversation_id: conversationId,
       sender_id: senderId,
@@ -64,6 +81,17 @@ export class ChatService {
   }
 
   async getOrCreateConversation(userId1: string, userId2: string): Promise<any> {
+    // Check if either user has blocked the other
+    const blocked = await Block.findOne({
+      $or: [
+        { blocker_id: userId1, blocked_id: userId2 },
+        { blocker_id: userId2, blocked_id: userId1 },
+      ],
+    });
+    if (blocked) {
+      throw new ForbiddenError("Cannot start a conversation with this user");
+    }
+
     let conversation = await Conversation.findOne({
       type: "direct",
       participants: { $all: [userId1, userId2] },
@@ -75,6 +103,9 @@ export class ChatService {
         type: "direct",
       });
     }
+
+    // Populate participants before returning
+    await conversation.populate("participants", "profile username photo_url");
 
     return conversation;
   }

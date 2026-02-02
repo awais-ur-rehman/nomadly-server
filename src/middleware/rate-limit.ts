@@ -20,3 +20,30 @@ export const otpLimiter = rateLimit({
   max: 3,
   message: "Too many OTP requests, please try again later",
 });
+
+/** Stricter limiter for file uploads - 20 per 15 min */
+export const uploadLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: "Too many upload requests, please try again later",
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+/** Chat message limiter - 60 messages per minute to prevent spam */
+export const chatLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 60,
+  message: "Sending messages too quickly, please slow down",
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+/** Swipe limiter - 100 swipes per 15 min */
+export const swipeLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: "Too many swipes, please try again later",
+  standardHeaders: true,
+  legacyHeaders: false,
+});

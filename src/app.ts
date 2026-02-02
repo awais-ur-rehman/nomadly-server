@@ -8,6 +8,7 @@ import { swaggerSpec } from "../documents/swagger";
 import { errorHandler } from "./middleware/error-handler";
 import { requestLogger } from "./middleware/logger";
 import { apiLimiter } from "./middleware/rate-limit";
+import { xssSanitize, noSqlSanitize } from "./middleware/sanitize";
 
 // Routes
 import { createAuthRoutes } from "./modules/auth/routes/auth.routes";
@@ -22,6 +23,7 @@ import { createNotificationRoutes } from "./modules/notifications/routes/notific
 import { createUploadRoutes } from "./modules/upload/routes/upload.routes";
 import { createFeedRoutes } from "./modules/feed/routes/feed.routes";
 import { createStoryRoutes } from "./modules/stories/routes/story.routes";
+import { createSafetyRoutes } from "./modules/safety/routes/safety.routes";
 
 // Services
 import { AuthService } from "./modules/auth/services/auth.service";
@@ -36,6 +38,7 @@ import { NotificationService } from "./modules/notifications/services/notificati
 import { UploadService } from "./modules/upload/services/upload.service";
 import { FeedService } from "./modules/feed/services/feed.service";
 import { StoryService } from "./modules/stories/services/story.service";
+import { SafetyService } from "./modules/safety/services/safety.service";
 
 // Controllers
 import { AuthController } from "./modules/auth/controllers/auth.controller";
@@ -50,21 +53,46 @@ import { NotificationController } from "./modules/notifications/controllers/noti
 import { UploadController } from "./modules/upload/controllers/upload.controller";
 import { FeedController } from "./modules/feed/controllers/feed.controller";
 import { StoryController } from "./modules/stories/controllers/story.controller";
+import { SafetyController } from "./modules/safety/controllers/safety.controller";
 
 export const createApp = () => {
   const app = express();
 
   // Security middleware
-  app.use(helmet());
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          scriptSrc: ["'self'", "'unsafe-inline'"], // unsafe-inline needed for swagger
+          styleSrc: ["'self'", "'unsafe-inline'"],
+          imgSrc: ["'self'", "data:", "https://res.cloudinary.com"],
+        },
+      },
+      hsts: {
+        maxAge: 31536000,
+        includeSubDomains: true,
+        preload: true,
+      },
+    })
+  );
   app.use(
     cors({
-      origin: process.env.ALLOWED_ORIGINS?.split(",") || "*",
+      origin: process.env.ALLOWED_ORIGINS?.split(",") || false,
       credentials: true,
+      methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+      allowedHeaders: ["Content-Type", "Authorization"],
+      maxAge: 86400,
     })
   );
   app.use(compression());
   app.use(express.json({ limit: "10mb" }));
   app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+
+  // Input sanitization - prevent NoSQL injection and XSS
+  app.use(noSqlSanitize);
+  app.use(xssSanitize);
+
   app.use(requestLogger);
   app.use(apiLimiter);
 
@@ -92,6 +120,7 @@ export const createApp = () => {
   const uploadService = new UploadService();
   const feedService = new FeedService();
   const storyService = new StoryService();
+  const safetyService = new SafetyService();
 
   // Initialize controllers
   const authController = new AuthController(authService);
@@ -106,6 +135,7 @@ export const createApp = () => {
   const uploadController = new UploadController(uploadService);
   const feedController = new FeedController(feedService);
   const storyController = new StoryController(storyService);
+  const safetyController = new SafetyController(safetyService);
 
   // API v1 Routes (new versioned API)
   app.use("/api/v1/auth", createAuthRoutes(authController));
@@ -121,6 +151,7 @@ export const createApp = () => {
   app.use("/api/v1/upload", createUploadRoutes(uploadController));
   app.use("/api/v1/feed", createFeedRoutes(feedController));
   app.use("/api/v1/stories", createStoryRoutes(storyController));
+  app.use("/api/v1/safety", createSafetyRoutes(safetyController));
 
   // Legacy API Routes (backward compatibility)
   app.use("/api/auth", createAuthRoutes(authController));
@@ -136,6 +167,7 @@ export const createApp = () => {
   app.use("/api/feed", createFeedRoutes(feedController));
   app.use("/api/stories", createStoryRoutes(storyController));
   app.use("/api/beacons", createActivityRoutes(activityController));
+  app.use("/api/safety", createSafetyRoutes(safetyController));
 
   // 404 handler
   app.use((_req: Request, res: Response) => {

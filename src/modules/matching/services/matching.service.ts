@@ -2,7 +2,8 @@ import { User } from "../../users/models/user.model";
 import { Match } from "../models/match.model";
 import { Swipe } from "../models/swipe.model";
 import { Conversation } from "../../chat/models/conversation.model";
-import { NotFoundError } from "../../../utils/errors";
+import { Block } from "../../safety/models/block.model";
+import { NotFoundError, ForbiddenError } from "../../../utils/errors";
 import { io } from "../../../server"; // Import socket instance
 import * as turf from "@turf/turf";
 
@@ -47,9 +48,16 @@ export class MatchingService {
     // Get IDs of users already swiped on
     const swipedUserIds = await Swipe.find({ actor_id: userId }).distinct("target_id");
 
+    // Get blocked user IDs (both directions)
+    const [blockedByMe, blockedMe] = await Promise.all([
+      Block.find({ blocker_id: userId }).distinct("blocked_id"),
+      Block.find({ blocked_id: userId }).distinct("blocker_id"),
+    ]);
+    const excludedIds = [...swipedUserIds, ...blockedByMe, ...blockedMe];
+
     // Build query based on preferences
     const query: any = {
-      _id: { $ne: userId, $nin: swipedUserIds }, // Exclude self and swiped users
+      _id: { $ne: userId, $nin: excludedIds }, // Exclude self, swiped, and blocked users
       "matching_profile.is_discoverable": true, // Only show discoverable users
     };
 
@@ -92,6 +100,8 @@ export class MatchingService {
       .limit(limit)
       .skip((page - 1) * limit);
 
+    console.log(`DEBUG: Matching - Found ${users.length} recommendations for user ${userId}`);
+
     // Map to simple response format
     return users.map(u => {
       // Calculate distance if possible
@@ -116,6 +126,19 @@ export class MatchingService {
    * Record a swipe action
    */
   async swipe(actorId: string, targetUserId: string, action: "like" | "pass" | "super_like") {
+    console.log(`DEBUG: Swipe - Actor: ${actorId}, Target: ${targetUserId}, Action: ${action}`);
+
+    // Check if either user has blocked the other
+    const blocked = await Block.findOne({
+      $or: [
+        { blocker_id: actorId, blocked_id: targetUserId },
+        { blocker_id: targetUserId, blocked_id: actorId },
+      ],
+    });
+    if (blocked) {
+      throw new ForbiddenError("Cannot interact with this user");
+    }
+
     // 1. Record the swipe
     await Swipe.create({
       actor_id: actorId,
@@ -136,6 +159,8 @@ export class MatchingService {
     });
 
     if (reciprocalSwipe) {
+      console.log(`DEBUG: IT'S A MATCH! - Users: ${actorId} & ${targetUserId}`);
+
       // IT'S A MATCH! 🎉
 
       // 1. Create Conversation
@@ -145,6 +170,7 @@ export class MatchingService {
         last_message: "New Match! Say hi 👋",
         last_message_time: new Date()
       });
+      console.log(`DEBUG: Conversation Created - ID: ${conversation._id}`);
 
       // 2. Create Match record
       const match = await Match.create({
@@ -152,6 +178,7 @@ export class MatchingService {
         initiated_by: actorId,
         conversation_id: conversation._id
       });
+      console.log(`DEBUG: Match Record Created - ID: ${match._id}`);
 
       // 3. Get User Details for response
       const matchedUser = await User.findById(targetUserId)
@@ -185,11 +212,15 @@ export class MatchingService {
    * Get list of matches
    */
   async getMatches(userId: string) {
+    console.log(`DEBUG: getMatches - Fetching matches for user: ${userId}`);
+
     const matches = await Match.find({
       users: userId
     })
       .sort({ created_at: -1 })
       .populate("conversation_id");
+
+    console.log(`DEBUG: getMatches - Found ${matches.length} matches`);
 
     // Populate the OTHER user in the match
     const populatedMatches = await Promise.all(matches.map(async (match) => {
@@ -197,10 +228,12 @@ export class MatchingService {
       const otherUser = await User.findById(otherUserId).select("username profile.name profile.photo_url nomad_id");
 
       return {
-        matchId: match._id,
+        _id: match._id, // User expects _id
+        userId: userId,
+        matchedUserId: otherUserId,
+        matchedUser: otherUser, // User expects matchedUser
         conversation_id: match.conversation_id,
-        user: otherUser,
-        matchedAt: match.created_at
+        createdAt: match.created_at // User expects createdAt
       };
     }));
 
