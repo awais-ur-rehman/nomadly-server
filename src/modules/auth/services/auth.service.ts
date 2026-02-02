@@ -121,6 +121,14 @@ export class AuthService {
     }
 
     user.is_active = true;
+
+    // Mark email as verified in the verification system
+    user.verification = user.verification || {} as any;
+    user.verification.email = { status: "verified", verified_at: new Date() };
+    user.verification.level = 1;
+    user.verification.badge = "basic";
+    user.markModified("verification");
+
     await user.save();
 
     // Delete OTP from Redis after successful verification

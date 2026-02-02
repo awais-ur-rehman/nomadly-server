@@ -55,6 +55,32 @@ export interface IUser extends Document {
     };
     is_discoverable: boolean;
   };
+  verification: {
+    email: { status: "none" | "verified"; verified_at?: Date };
+    phone: { status: "none" | "submitted" | "verified"; number?: string; verified_at?: Date };
+    photo: {
+      status: "none" | "pending" | "verified" | "rejected";
+      selfie_url?: string;
+      submitted_at?: Date;
+      verified_at?: Date;
+      rejection_reason?: string;
+    };
+    id_document: {
+      status: "none" | "pending" | "verified" | "rejected";
+      document_url?: string;
+      document_type?: string;
+      submitted_at?: Date;
+      verified_at?: Date;
+      rejection_reason?: string;
+    };
+    community: {
+      status: "none" | "verified";
+      vouch_count: number;
+      verified_at?: Date;
+    };
+    level: number; // 0-5 computed from above
+    badge: "none" | "basic" | "trusted" | "verified" | "super_verified" | "nomad_elite";
+  };
   invited_by?: string;
   invite_count: number;
   is_active: boolean;
@@ -168,6 +194,43 @@ const userSchema = new Schema<IUser>(
         max_distance_km: { type: Number, default: 100 },
       },
       is_discoverable: { type: Boolean, default: true },
+    },
+    verification: {
+      email: {
+        status: { type: String, enum: ["none", "verified"], default: "none" },
+        verified_at: { type: Date },
+      },
+      phone: {
+        status: { type: String, enum: ["none", "submitted", "verified"], default: "none" },
+        number: { type: String },
+        verified_at: { type: Date },
+      },
+      photo: {
+        status: { type: String, enum: ["none", "pending", "verified", "rejected"], default: "none" },
+        selfie_url: { type: String },
+        submitted_at: { type: Date },
+        verified_at: { type: Date },
+        rejection_reason: { type: String },
+      },
+      id_document: {
+        status: { type: String, enum: ["none", "pending", "verified", "rejected"], default: "none" },
+        document_url: { type: String },
+        document_type: { type: String },
+        submitted_at: { type: Date },
+        verified_at: { type: Date },
+        rejection_reason: { type: String },
+      },
+      community: {
+        status: { type: String, enum: ["none", "verified"], default: "none" },
+        vouch_count: { type: Number, default: 0 },
+        verified_at: { type: Date },
+      },
+      level: { type: Number, default: 0, min: 0, max: 5 },
+      badge: {
+        type: String,
+        enum: ["none", "basic", "trusted", "verified", "super_verified", "nomad_elite"],
+        default: "none",
+      },
     },
     invited_by: { type: Schema.Types.ObjectId as any, ref: "User" },
     invite_count: { type: Number, default: 0 },

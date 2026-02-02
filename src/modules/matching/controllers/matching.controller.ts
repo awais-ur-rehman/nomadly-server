@@ -17,11 +17,13 @@ export class MatchingController {
 
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
+    const mode = req.query.mode as "friends" | "dating" | "both" | undefined;
 
     const recommendations = await this.matchingService.getRecommendations(
       req.user.userId,
       page,
-      limit
+      limit,
+      mode
     );
     ApiResponse.success(res, { users: recommendations });
   });
@@ -31,11 +33,13 @@ export class MatchingController {
     if (!req.user) throw new Error("User not authenticated");
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
+    const mode = req.query.mode as "friends" | "dating" | "both" | undefined;
 
     const recommendations = await this.matchingService.getRecommendations(
       req.user.userId,
       page,
-      limit
+      limit,
+      mode
     );
     ApiResponse.success(res, { users: recommendations });
   });

@@ -1,11 +1,11 @@
-import { User } from "../../users/models/user.model";
+import { User, type IUser } from "../../users/models/user.model";
 import { Match } from "../models/match.model";
 import { Swipe } from "../models/swipe.model";
 import { Conversation } from "../../chat/models/conversation.model";
 import { Block } from "../../safety/models/block.model";
 import { NotFoundError, ForbiddenError } from "../../../utils/errors";
 import { io } from "../../../server"; // Import socket instance
-import * as turf from "@turf/turf";
+import { rankCandidates } from "./scoring.engine";
 
 export class MatchingService {
   /**
@@ -39,87 +39,87 @@ export class MatchingService {
   }
 
   /**
-   * Get recommendations (Discovery Feed)
+   * Get recommendations (Discovery Feed) — Smart Matching Algorithm
+   *
+   * Strategy:
+   * 1. Fetch a broad candidate pool using basic filters (exclude self, swiped, blocked)
+   * 2. Score every candidate on 6 dimensions (route, temporal, hobby, proximity, trust, rig)
+   * 3. Rank by weighted composite score
+   * 4. Paginate the ranked results
    */
-  async getRecommendations(userId: string, page: number = 1, limit: number = 10) {
+  async getRecommendations(
+    userId: string,
+    page: number = 1,
+    limit: number = 10,
+    mode?: "friends" | "dating" | "both"
+  ) {
     const user = await User.findById(userId);
     if (!user) throw new NotFoundError("User not found");
 
-    // Get IDs of users already swiped on
-    const swipedUserIds = await Swipe.find({ actor_id: userId }).distinct("target_id");
+    // Determine matching mode from param or user's profile intent
+    const matchMode = mode || user.matching_profile.intent || "both";
 
-    // Get blocked user IDs (both directions)
-    const [blockedByMe, blockedMe] = await Promise.all([
+    // Get IDs to exclude (swiped + blocked)
+    const [swipedUserIds, blockedByMe, blockedMe] = await Promise.all([
+      Swipe.find({ actor_id: userId }).distinct("target_id"),
       Block.find({ blocker_id: userId }).distinct("blocked_id"),
       Block.find({ blocked_id: userId }).distinct("blocker_id"),
     ]);
     const excludedIds = [...swipedUserIds, ...blockedByMe, ...blockedMe];
 
-    // Build query based on preferences
+    // Build broad candidate query — only hard filters, scoring handles the rest
     const query: any = {
-      _id: { $ne: userId, $nin: excludedIds }, // Exclude self, swiped, and blocked users
-      "matching_profile.is_discoverable": true, // Only show discoverable users
+      _id: { $ne: userId, $nin: excludedIds },
+      is_active: true,
+      "matching_profile.is_discoverable": true,
     };
 
-    // Filter by Intent
-    if (user.matching_profile.intent !== "both") {
-      query["matching_profile.intent"] = { $in: [user.matching_profile.intent, "both"] };
+    // Intent compatibility filter
+    if (matchMode !== "both") {
+      query["matching_profile.intent"] = { $in: [matchMode, "both"] };
     }
 
-    // Filter by Age
-    const { min_age, max_age, max_distance_km } = user.matching_profile.preferences;
+    // Age filter (hard constraint — don't show people outside preference)
+    const { min_age, max_age } = user.matching_profile.preferences;
     if (min_age || max_age) {
       query["profile.age"] = {};
       if (min_age) query["profile.age"].$gte = min_age;
       if (max_age) query["profile.age"].$lte = max_age;
     }
 
-    console.log("DEBUG: Matching - User Profile:", {
-      id: user._id,
-      coords: user.travel_route?.origin?.coordinates,
-      pref: user.matching_profile
-    });
+    // Fetch a broad candidate pool (up to 200) for scoring
+    // We need all route, hobby, rig, and trust fields for the scoring engine
+    const CANDIDATE_POOL_SIZE = 200;
+    const candidates = await User.find(query)
+      .select("username profile rig travel_route nomad_id matching_profile")
+      .limit(CANDIDATE_POOL_SIZE);
 
-    // Filter by Location (if user has location)
-    // Filter by Location (if user has location)
-    if (user.travel_route?.origin?.coordinates && max_distance_km > 0) {
-      query["travel_route.origin"] = {
-        $near: {
-          $geometry: user.travel_route.origin,
-          $maxDistance: max_distance_km * 1000, // Convert km to meters
-        },
-      };
-    } else {
-      console.log("DEBUG: Matching - Location filter skipped (missing coords or distance=0)");
-    }
+    // Score and rank all candidates using the smart matching algorithm
+    const ranked = rankCandidates(
+      user as IUser,
+      candidates as IUser[],
+      matchMode as "friends" | "dating" | "both"
+    );
 
-    console.log("DEBUG: Matching - Final Query:", JSON.stringify(query, null, 2));
+    // Paginate the ranked results
+    const startIndex = (page - 1) * limit;
+    const paginatedResults = ranked.slice(startIndex, startIndex + limit);
 
-    const users = await User.find(query)
-      .select("profile rig nomad_id travel_route.origin") // Select only needed fields
-      .limit(limit)
-      .skip((page - 1) * limit);
-
-    console.log(`DEBUG: Matching - Found ${users.length} recommendations for user ${userId}`);
-
-    // Map to simple response format
-    return users.map(u => {
-      // Calculate distance if possible
-      let distance_km = null;
-      if (user.travel_route?.origin && u.travel_route?.origin) {
-        const from = turf.point(user.travel_route.origin.coordinates);
-        const to = turf.point(u.travel_route.origin.coordinates);
-        distance_km = Math.round(turf.distance(from, to, { units: "kilometers" }));
-      }
-
-      return {
-        _id: u._id,
-        username: u.username,
-        profile: u.profile,
-        nomad_id: u.nomad_id,
-        distance_km
-      };
-    });
+    // Map to response format with score breakdown
+    return paginatedResults.map((entry) => ({
+      _id: entry.user._id,
+      username: entry.user.username,
+      profile: entry.user.profile,
+      rig: entry.user.rig,
+      nomad_id: entry.user.nomad_id,
+      travel_route: {
+        destination: entry.user.travel_route?.destination,
+        start_date: entry.user.travel_route?.start_date,
+        duration_days: entry.user.travel_route?.duration_days,
+      },
+      distance_km: entry.distance_km,
+      compatibility: entry.score,
+    }));
   }
 
   /**
