@@ -3,6 +3,7 @@ import { Report } from "../models/report.model";
 import { User } from "../../users/models/user.model";
 import { Match } from "../../matching/models/match.model";
 import { Swipe } from "../../matching/models/swipe.model";
+import { Follow } from "../../users/models/follow.model";
 import { NotFoundError, ConflictError, ValidationError } from "../../../utils/errors";
 
 export class SafetyService {
@@ -41,6 +42,14 @@ export class SafetyService {
         { actor_id: blockerId, target_id: blockedId },
         { actor_id: blockedId, target_id: blockerId },
       ],
+    });
+
+    // Clean up: remove follow relationships (mutual unfollow)
+    await Follow.deleteMany({
+      $or: [
+        { follower_id: blockerId, following_id: blockedId },
+        { follower_id: blockedId, following_id: blockerId },
+      ]
     });
 
     return { blocked: true, blocked_user_id: blockedId };

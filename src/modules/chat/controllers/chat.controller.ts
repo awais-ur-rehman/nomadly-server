@@ -2,6 +2,7 @@ import { type Request, type Response } from "express";
 import { ChatService } from "../services/chat.service";
 import { ApiResponse } from "../../../utils/response";
 import { asyncHandler } from "../../../middleware/error-handler";
+import { io } from "../../../server";
 
 export class ChatController {
   constructor(private chatService: ChatService) { }
@@ -48,6 +49,11 @@ export class ChatController {
       message_type || "text"
     );
 
+    // Broadcast to room
+    if (io) {
+      io.to(`conversation:${conversationId}`).emit("receive_message", newMessage);
+    }
+
     ApiResponse.success(res, newMessage, "Message sent", 201);
   });
 
@@ -76,6 +82,10 @@ export class ChatController {
 
     if (!targetId) {
       throw new Error("Target user ID is required");
+    }
+
+    if (targetId === req.user!.userId) {
+      throw new Error("You cannot message yourself");
     }
 
     const conversation = await this.chatService.getOrCreateConversation(

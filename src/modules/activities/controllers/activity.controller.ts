@@ -20,11 +20,8 @@ export class ActivityController {
       verified_only
     } = req.body;
 
-    const finalDescription = title && description
-      ? `${title}\n\n${description}`
-      : (description || title);
-
     const payload = {
+      title,
       activity_type: activity_type || type,
       location: {
         type: "Point" as const,
@@ -35,7 +32,7 @@ export class ActivityController {
       },
       max_participants: max_participants || maxParticipants,
       event_time: event_time || startTime,
-      description: finalDescription,
+      description: description,
       verified_only
     };
 

@@ -77,6 +77,8 @@ export class ChatService {
     conversation.last_message_time = new Date();
     await conversation.save();
 
+    await newMessage.populate("sender_id", "profile");
+
     return newMessage;
   }
 

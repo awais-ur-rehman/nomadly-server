@@ -1,5 +1,6 @@
 import { User } from "../models/user.model";
 import { Follow } from "../models/follow.model";
+import { Block } from "../../safety/models/block.model";
 import { NotFoundError } from "../../../utils/errors";
 import { type GeospatialPoint } from "../../../types";
 import { logger } from "../../../utils/logger";
@@ -154,7 +155,14 @@ export class UserService {
     const query: any = { is_active: true };
 
     if (currentUserId) {
-      query._id = { $ne: currentUserId };
+      // Get IDs to exclude (blocked by me OR blocked me)
+      const [blockedByMe, blockedMe] = await Promise.all([
+        Block.find({ blocker_id: currentUserId }).distinct("blocked_id"),
+        Block.find({ blocked_id: currentUserId }).distinct("blocker_id"),
+      ]);
+
+      const excludedIds = [...blockedByMe, ...blockedMe, currentUserId];
+      query._id = { $nin: excludedIds };
     }
 
     if (filters.intent) {
