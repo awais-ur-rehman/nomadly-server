@@ -173,8 +173,11 @@ export class MatchingService {
       console.log(`DEBUG: Conversation Created - ID: ${conversation._id}`);
 
       // 2. Create Match record
+      const sortedUsers = [actorId, targetUserId].sort();
       const match = await Match.create({
-        users: [actorId, targetUserId].sort(), // Sort for consistent querying
+        users: sortedUsers, // Array for lookups
+        user1: sortedUsers[0], // First for compound unique index
+        user2: sortedUsers[1], // Second for compound unique index
         initiated_by: actorId,
         conversation_id: conversation._id
       });

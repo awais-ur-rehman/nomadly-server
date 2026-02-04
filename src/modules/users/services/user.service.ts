@@ -323,11 +323,22 @@ export class UserService {
 
     const query: any = {
       is_active: true,
-      "travel_route.destination": {
-        $geoWithin: {
-          $centerSphere: [[lng, lat], radiusInRadians]
+      $or: [
+        {
+          "travel_route.destination": {
+            $geoWithin: {
+              $centerSphere: [[lng, lat], radiusInRadians]
+            }
+          }
+        },
+        {
+          "travel_route.origin": {
+            $geoWithin: {
+              $centerSphere: [[lng, lat], radiusInRadians]
+            }
+          }
         }
-      }
+      ]
     };
 
     if (currentUserId) {

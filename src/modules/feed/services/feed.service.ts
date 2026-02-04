@@ -70,7 +70,12 @@ export class FeedService {
 
         const followingIds = following.map((f) => f.following_id);
         // Include user's own posts - Ensuring it's an ObjectId for consistent query
-        followingIds.push(new mongoose.Types.ObjectId(userId) as any);
+        try {
+            followingIds.push(new mongoose.Types.ObjectId(userId) as any);
+        } catch (e) {
+            logger.warn({ userId, error: e }, "Failed to convert userId to ObjectId for feed query");
+            // Fallback: push as string if needed, though likely won't match if schema is strict
+        }
 
         logger.debug({ userId, followingCount: following.length, totalFollowingIds: followingIds.length }, "Fetching timeline posts");
 

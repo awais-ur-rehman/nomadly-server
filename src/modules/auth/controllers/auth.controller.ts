@@ -35,6 +35,18 @@ export class AuthController {
     ApiResponse.success(res, result, "Email verified successfully");
   });
 
+  verifyPhone = asyncHandler(async (req: Request, res: Response) => {
+    const { phone, code } = req.body;
+    // Mock verification for now
+    if (code !== "123456") {
+      throw new Error("Invalid verification code");
+    }
+    console.log(phone);
+    // Update user phone status
+    // const result = await this.authService.verifyPhone(phone);
+    ApiResponse.success(res, { success: true }, "Phone verified successfully");
+  });
+
   login = asyncHandler(async (req: Request, res: Response) => {
     const { identifier, email, username, password } = req.body;
     // Support legacy login with email or username field

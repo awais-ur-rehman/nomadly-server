@@ -81,6 +81,13 @@ export const createAuthRoutes = (authController: AuthController) => {
     authController.verifyOtp
   );
 
+  router.post(
+    "/verify-phone",
+    authLimiter,
+    // Add validation schema later
+    authController.verifyPhone
+  );
+
   router.post("/login", authLimiter, validate(loginSchema), authController.login);
 
   router.post(
