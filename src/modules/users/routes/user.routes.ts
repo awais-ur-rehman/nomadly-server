@@ -94,6 +94,7 @@ export const createUserRoutes = (userController: UserController) => {
     userController.updateRoute
   );
   router.get("/search", authenticate, userController.searchUsers);
+  router.get("/travelers", authenticate, userController.getTravelers);
   router.patch("/toggle-builder", authenticate, userController.toggleBuilderStatus);
 
   // User profile

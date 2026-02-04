@@ -310,4 +310,64 @@ export class UserService {
       limit
     };
   }
+  async searchTravelers(
+    lat: number,
+    lng: number,
+    radiusInMeters: number,
+    pagination: { page: number; limit: number },
+    currentUserId?: string
+  ): Promise<{ users: any[]; total: number }> {
+    // Convert radius from meters to radians for $centerSphere
+    // Earth's radius is approximately 6378100 meters
+    const radiusInRadians = radiusInMeters / 6378100;
+
+    const query: any = {
+      is_active: true,
+      "travel_route.destination": {
+        $geoWithin: {
+          $centerSphere: [[lng, lat], radiusInRadians]
+        }
+      }
+    };
+
+    if (currentUserId) {
+      // Exclude self and blocked users
+      const [blockedByMe, blockedMe] = await Promise.all([
+        Block.find({ blocker_id: currentUserId }).distinct("blocked_id"),
+        Block.find({ blocked_id: currentUserId }).distinct("blocker_id"),
+      ]);
+      const excludedIds = [...blockedByMe, ...blockedMe, currentUserId];
+      query._id = { $nin: excludedIds };
+    }
+
+    const skip = (pagination.page - 1) * pagination.limit;
+
+    const users = await User.find(query)
+      .select("-password_hash")
+      .skip(skip)
+      .limit(pagination.limit);
+
+    const total = await User.countDocuments(query);
+
+    // Populate relationship metadata
+    if (currentUserId) {
+      const usersWithRelationship = await Promise.all(
+        users.map(async (user) => {
+          const userObj = user.toObject();
+          const { isFollowing, isPending } = await this.checkIsFollowing(currentUserId, user._id.toString());
+          const { isFollowing: followsMe } = await this.checkIsFollowing(user._id.toString(), currentUserId);
+
+          return {
+            ...userObj,
+            isFollowing,
+            followsMe,
+            isFollowingPending: isPending
+          };
+        })
+      );
+      return { users: usersWithRelationship, total };
+    }
+
+    return { users, total };
+  }
 }

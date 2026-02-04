@@ -133,4 +133,24 @@ export class UserController {
     const result = await this.userService.getFollowing(userId, page, limit);
     ApiResponse.paginated(res, result.following, page, limit, result.total);
   });
+  getTravelers = asyncHandler(async (req: Request, res: Response) => {
+    const lat = parseFloat(req.query.lat as string);
+    const lng = parseFloat(req.query.lng as string);
+    const radius = parseFloat(req.query.radius as string) || 50000; // 50km default
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 20;
+
+    if (isNaN(lat) || isNaN(lng)) {
+      throw new Error("Latitude and longitude are required");
+    }
+
+    const result = await this.userService.searchTravelers(
+      lat,
+      lng,
+      radius,
+      { page, limit },
+      req.user?.userId
+    );
+    ApiResponse.paginated(res, result.users, page, limit, result.total);
+  });
 }
