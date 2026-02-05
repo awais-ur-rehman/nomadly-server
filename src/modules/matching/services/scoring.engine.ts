@@ -67,12 +67,16 @@ function scoreRouteOverlap(userA: IUser, userB: IUser): number {
     const originB = userB.travel_route?.origin;
     if (!originA?.coordinates || !originB?.coordinates) return 0;
 
-    const dist = turf.distance(
-      turf.point(originA.coordinates),
-      turf.point(originB.coordinates),
-      { units: "kilometers" }
-    );
-    return Math.max(0, 100 - (dist / 10)); // More lenient for origin-only
+    try {
+      const dist = turf.distance(
+        turf.point(originA.coordinates),
+        turf.point(originB.coordinates),
+        { units: "kilometers" }
+      );
+      return Math.max(0, 100 - (dist / 10)); // More lenient for origin-only
+    } catch (e) {
+      return 0; // Fallback if coordinates are invalid
+    }
   }
 
   const distance = turf.distance(
@@ -171,17 +175,21 @@ function scoreProximity(userA: IUser, userB: IUser): number {
 
   if (!originA?.coordinates || !originB?.coordinates) return 0;
 
-  const distance = turf.distance(
-    turf.point(originA.coordinates),
-    turf.point(originB.coordinates),
-    { units: "kilometers" }
-  );
+  try {
+    const distance = turf.distance(
+      turf.point(originA.coordinates),
+      turf.point(originB.coordinates),
+      { units: "kilometers" }
+    );
 
-  // Within 10km = perfect
-  if (distance <= 10) return 100;
-  // Linear decay to 0 at max_distance (default 500km for scoring)
-  if (distance >= 500) return 0;
-  return Math.round(100 * (1 - (distance - 10) / 490));
+    // Within 10km = perfect
+    if (distance <= 10) return 100;
+    // Linear decay to 0 at max_distance (default 500km for scoring)
+    if (distance >= 500) return 0;
+    return Math.round(100 * (1 - (distance - 10) / 490));
+  } catch (e) {
+    return 0;
+  }
 }
 
 /**
@@ -299,14 +307,18 @@ export function rankCandidates(
 
       // Calculate raw distance for display
       let distance_km: number | null = null;
-      if (currentUser.travel_route?.origin && candidate.travel_route?.origin) {
-        distance_km = Math.round(
-          turf.distance(
-            turf.point(currentUser.travel_route.origin.coordinates),
-            turf.point(candidate.travel_route.origin.coordinates),
-            { units: "kilometers" }
-          )
-        );
+      if (currentUser.travel_route?.origin?.coordinates && candidate.travel_route?.origin?.coordinates) {
+        try {
+          distance_km = Math.round(
+            turf.distance(
+              turf.point(currentUser.travel_route.origin.coordinates),
+              turf.point(candidate.travel_route.origin.coordinates),
+              { units: "kilometers" }
+            )
+          );
+        } catch (e) {
+          distance_km = null;
+        }
       }
 
       return { user: candidate, score, distance_km };
