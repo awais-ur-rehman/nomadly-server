@@ -17,8 +17,8 @@ export interface IUser extends Document {
     bio?: string;
   };
   rig: {
-    type: "sprinter" | "skoolie" | "suv" | "truck_camper";
-    crew_type: "solo" | "couple" | "with_pets";
+    type: "van" | "bus" | "truck" | "car" | "rv" | "sprinter" | "skoolie" | "suv" | "truck_camper" | "other";
+    crew_type: "solo" | "couple" | "family" | "friends" | "with_pets";
     pet_friendly: boolean;
   };
   travel_route?: {
@@ -121,11 +121,11 @@ const userSchema = new Schema<IUser>(
     rig: {
       type: {
         type: String,
-        enum: ["sprinter", "skoolie", "suv", "truck_camper"],
+        enum: ["van", "bus", "truck", "car", "rv", "sprinter", "skoolie", "suv", "truck_camper", "other"],
       },
       crew_type: {
         type: String,
-        enum: ["solo", "couple", "with_pets"],
+        enum: ["solo", "couple", "family", "friends", "with_pets"],
         default: "solo",
       },
       pet_friendly: { type: Boolean, default: false },

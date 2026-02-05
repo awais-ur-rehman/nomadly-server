@@ -21,8 +21,8 @@ const updateProfileSchema = z.object({
       .optional(),
     rig: z
       .object({
-        type: z.enum(["sprinter", "skoolie", "suv", "truck_camper"]).optional(),
-        crew_type: z.enum(["solo", "couple", "with_pets"]).optional(),
+        type: z.enum(["van", "bus", "truck", "car", "rv", "sprinter", "skoolie", "suv", "truck_camper", "other"]).optional(),
+        crew_type: z.enum(["solo", "couple", "family", "friends", "with_pets"]).optional(),
         pet_friendly: z.boolean().optional(),
       })
       .optional(),
@@ -50,8 +50,8 @@ const completeProfileSchema = z.object({
       .optional(),
     rig: z
       .object({
-        type: z.enum(["sprinter", "skoolie", "suv", "truck_camper"]).optional(),
-        crew_type: z.enum(["solo", "couple", "with_pets"]).optional(),
+        type: z.enum(["van", "bus", "truck", "car", "rv", "sprinter", "skoolie", "suv", "truck_camper", "other"]).optional(),
+        crew_type: z.enum(["solo", "couple", "family", "friends", "with_pets"]).optional(),
         pet_friendly: z.boolean().optional(),
       })
       .optional(),
