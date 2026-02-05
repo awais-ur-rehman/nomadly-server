@@ -2,7 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { VerificationController } from "../controllers/verification.controller";
 import { validate } from "../../../middleware/validation";
-import { authenticate } from "../../../middleware/auth";
+import { authenticate, authorize } from "../../../middleware/auth";
 
 const router = Router();
 
@@ -45,10 +45,10 @@ export const createVerificationRoutes = (verificationController: VerificationCon
   router.post("/community/refresh", authenticate, verificationController.refreshCommunity);
 
   // ─── Admin endpoints ───
-  router.get("/admin/pending", authenticate, verificationController.getPending);
-  router.patch("/admin/phone/:userId", authenticate, validate(adminReviewSchema), verificationController.reviewPhone);
-  router.patch("/admin/photo/:userId", authenticate, validate(adminReviewSchema), verificationController.reviewPhoto);
-  router.patch("/admin/id-document/:userId", authenticate, validate(adminReviewSchema), verificationController.reviewIdDocument);
+  router.get("/admin/pending", authenticate, authorize("admin"), verificationController.getPending);
+  router.patch("/admin/phone/:userId", authenticate, authorize("admin"), validate(adminReviewSchema), verificationController.reviewPhone);
+  router.patch("/admin/photo/:userId", authenticate, authorize("admin"), validate(adminReviewSchema), verificationController.reviewPhoto);
+  router.patch("/admin/id-document/:userId", authenticate, authorize("admin"), validate(adminReviewSchema), verificationController.reviewIdDocument);
 
   return router;
 };

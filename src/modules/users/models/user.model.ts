@@ -81,6 +81,7 @@ export interface IUser extends Document {
     level: number; // 0-5 computed from above
     badge: "none" | "basic" | "trusted" | "verified" | "super_verified" | "nomad_elite";
   };
+  role: "user" | "admin";
   invited_by?: string;
   invite_count: number;
   is_active: boolean;
@@ -231,6 +232,11 @@ const userSchema = new Schema<IUser>(
         enum: ["none", "basic", "trusted", "verified", "super_verified", "nomad_elite"],
         default: "none",
       },
+    },
+    role: {
+      type: String,
+      enum: ["user", "admin"],
+      default: "user",
     },
     invited_by: { type: Schema.Types.ObjectId as any, ref: "User" },
     invite_count: { type: Number, default: 0 },

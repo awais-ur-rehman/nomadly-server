@@ -64,4 +64,30 @@ export class JobController {
         await this.jobService.deleteJob(id, req.user.userId);
         ApiResponse.success(res, null, "Job deleted successfully");
     });
+
+    applyForJob = asyncHandler(async (req: Request, res: Response) => {
+        if (!req.user) throw new Error("User not authenticated");
+        const { id } = req.params;
+        const { cover_letter } = req.body;
+
+        const application = await this.jobService.applyForJob(id, req.user.userId, cover_letter);
+        ApiResponse.success(res, application, "Application submitted successfully", 201);
+    });
+
+    getJobApplications = asyncHandler(async (req: Request, res: Response) => {
+        if (!req.user) throw new Error("User not authenticated");
+        const { id } = req.params;
+
+        const applications = await this.jobService.getApplicationsByJob(id, req.user.userId);
+        ApiResponse.success(res, { applications });
+    });
+
+    updateApplicationStatus = asyncHandler(async (req: Request, res: Response) => {
+        if (!req.user) throw new Error("User not authenticated");
+        const { applicationId } = req.params;
+        const { status } = req.body;
+
+        const application = await this.jobService.updateApplicationStatus(applicationId, req.user.userId, status);
+        ApiResponse.success(res, application, "Application status updated");
+    });
 }

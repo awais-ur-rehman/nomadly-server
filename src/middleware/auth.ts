@@ -5,6 +5,7 @@ import { UnauthorizedError } from "../utils/errors";
 interface JWTPayload {
   userId: string;
   email: string;
+  role: "user" | "admin";
 }
 
 declare global {
@@ -41,17 +42,16 @@ export const authenticate = async (
   }
 };
 
-export const authorize = (..._roles: string[]) => {
+export const authorize = (...roles: string[]) => {
   return async (req: Request, _res: Response, next: NextFunction) => {
     if (!req.user) {
       return next(new UnauthorizedError("Not authenticated"));
     }
 
-    // Note: Roles feature not implemented yet, but keeping for future use
-    // const hasRole = roles.some((role) => req.user?.roles?.includes(role));
-    // if (!hasRole) {
-    //   return next(new UnauthorizedError("Insufficient permissions"));
-    // }
+    const hasRole = roles.includes(req.user.role);
+    if (!hasRole) {
+      return next(new UnauthorizedError("Insufficient permissions"));
+    }
 
     next();
   };

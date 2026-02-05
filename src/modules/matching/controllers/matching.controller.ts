@@ -72,4 +72,33 @@ export class MatchingController {
     const matches = await this.matchingService.getMatches(req.user.userId);
     ApiResponse.success(res, { matches });
   });
+
+  /**
+   * Caravan Joining
+   */
+
+  sendCaravanRequest = asyncHandler(async (req: Request, res: Response) => {
+    if (!req.user) throw new Error("User not authenticated");
+    const { targetUserId } = req.body;
+
+    const request = await this.matchingService.sendCaravanRequest(req.user.userId, targetUserId);
+    ApiResponse.success(res, request, "Caravan request sent", 201);
+  });
+
+  respondToCaravanRequest = asyncHandler(async (req: Request, res: Response) => {
+    if (!req.user) throw new Error("User not authenticated");
+    const { requestId } = req.params;
+    const { status } = req.body;
+
+    const request = await this.matchingService.respondToCaravanRequest(requestId, req.user.userId, status);
+    ApiResponse.success(res, request, "Response recorded");
+  });
+
+  getCaravanRequests = asyncHandler(async (req: Request, res: Response) => {
+    if (!req.user) throw new Error("User not authenticated");
+    const type = (req.query.type as "incoming" | "outgoing") || "incoming";
+
+    const requests = await this.matchingService.getCaravanRequests(req.user.userId, type);
+    ApiResponse.success(res, { requests });
+  });
 }

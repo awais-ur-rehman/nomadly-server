@@ -25,27 +25,27 @@ export interface WeightProfile {
 
 const WEIGHT_PROFILES: Record<string, WeightProfile> = {
   dating: {
-    route_overlap: 0.25,
-    temporal_overlap: 0.25,
+    route_overlap: 0.20,
+    temporal_overlap: 0.20,
     hobby_match: 0.15,
     proximity: 0.15,
-    trust: 0.15,
+    trust: 0.25, // Increased trust weight
     rig_compatibility: 0.05,
   },
   friends: {
-    route_overlap: 0.20,
-    temporal_overlap: 0.20,
-    hobby_match: 0.30,  // Hobbies matter more for friends
+    route_overlap: 0.15,
+    temporal_overlap: 0.15,
+    hobby_match: 0.30,
     proximity: 0.10,
-    trust: 0.10,
+    trust: 0.20, // Increased trust weight
     rig_compatibility: 0.10,
   },
   both: {
-    route_overlap: 0.22,
-    temporal_overlap: 0.22,
+    route_overlap: 0.18,
+    temporal_overlap: 0.18,
     hobby_match: 0.22,
     proximity: 0.12,
-    trust: 0.12,
+    trust: 0.20, // Increased trust weight
     rig_compatibility: 0.10,
   },
 };

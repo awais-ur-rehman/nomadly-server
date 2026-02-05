@@ -26,6 +26,7 @@ export const createFeedRoutes = (feedController: FeedController) => {
 
     // Timeline/Feed
     router.get("/", feedController.getTimeline);
+    router.get("/discover", feedController.getDiscoverFeed);
 
     // Posts
     router.post("/posts", validate(createPostSchema), feedController.createPost);

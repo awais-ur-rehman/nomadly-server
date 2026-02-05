@@ -30,6 +30,12 @@ const swipeSchema = z.object({
   }),
 });
 
+const caravanResponseSchema = z.object({
+  body: z.object({
+    status: z.enum(["accepted", "rejected"]),
+  }),
+});
+
 export const createMatchingRoutes = (matchingController: MatchingController) => {
   // Preferences
   router.patch("/preferences", authenticate, validate(updatePreferencesSchema), matchingController.updatePreferences);
@@ -46,6 +52,11 @@ export const createMatchingRoutes = (matchingController: MatchingController) => 
   router.get("/matches", authenticate, matchingController.getMatches);
   // Alias for backward compatibility
   router.get("/mutual", authenticate, matchingController.getMutualMatches);
+
+  // Caravan Joining
+  router.post("/caravan/request", authenticate, matchingController.sendCaravanRequest);
+  router.get("/caravan/requests", authenticate, matchingController.getCaravanRequests);
+  router.patch("/caravan/requests/:requestId", authenticate, validate(caravanResponseSchema), matchingController.respondToCaravanRequest);
 
   return router;
 };

@@ -49,6 +49,7 @@ export const createActivityRoutes = (activityController: ActivityController) => 
     activityController.createActivity
   );
   router.get("/nearby", authenticate, activityController.getNearby);
+  router.get("/:id", authenticate, activityController.getActivity);
   router.post(
     "/:id/join",
     authenticate,

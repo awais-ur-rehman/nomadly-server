@@ -15,6 +15,18 @@ export class ActivityService {
     return activity;
   }
 
+  async getActivityById(id: string): Promise<any> {
+    const activity = await Activity.findById(id)
+      .populate("host_id", "profile nomad_id")
+      .populate("current_participants", "profile nomad_id")
+      .populate("pending_requests", "profile nomad_id");
+
+    if (!activity) {
+      throw new NotFoundError("Activity not found");
+    }
+    return activity;
+  }
+
   async getNearbyActivities(
     location: { lat: number; lng: number },
     maxDistance: number = 50000

@@ -1,6 +1,7 @@
 import { Job, type IJob } from "../models/job.model";
 import { User } from "../../users/models/user.model";
-import { ForbiddenError } from "../../../utils/errors";
+import { JobApplication, type IJobApplication } from "../models/job-application.model";
+import { ForbiddenError, NotFoundError } from "../../../utils/errors";
 
 interface SearchJobsFilters {
     category?: string[];
@@ -107,6 +108,63 @@ export class JobService {
 
     async getJobById(jobId: string): Promise<IJob | null> {
         return Job.findById(jobId).populate("author_id", "username profile.photo_url profile.bio nomad_id.verified");
+    }
+
+    async applyForJob(jobId: string, applicantId: string, coverLetter: string): Promise<IJobApplication> {
+        const job = await Job.findById(jobId);
+        if (!job) throw new NotFoundError("Job not found");
+        if (job.status !== "open") throw new Error("Job is no longer open for applications");
+        if (job.author_id.toString() === applicantId) throw new Error("You cannot apply to your own job");
+
+        try {
+            const application = await JobApplication.create({
+                job_id: jobId,
+                applicant_id: applicantId,
+                cover_letter: coverLetter,
+            });
+            return application;
+        } catch (error: any) {
+            if (error.code === 11000) throw new Error("You have already applied for this job");
+            throw error;
+        }
+    }
+
+    async getApplicationsByJob(jobId: string, userId: string): Promise<IJobApplication[]> {
+        const job = await Job.findById(jobId);
+        if (!job) throw new NotFoundError("Job not found");
+
+        // Only job author can see applications
+        if (job.author_id.toString() !== userId) {
+            throw new ForbiddenError("Only the job owner can view applications");
+        }
+
+        return JobApplication.find({ job_id: jobId })
+            .populate("applicant_id", "username profile.name profile.photo_url profile.bio nomad_id.verified")
+            .sort({ created_at: -1 });
+    }
+
+    async updateApplicationStatus(
+        applicationId: string,
+        userId: string,
+        status: "pending" | "interview" | "hired" | "rejected"
+    ): Promise<IJobApplication> {
+        const application = await JobApplication.findById(applicationId).populate("job_id");
+        if (!application) throw new NotFoundError("Application not found");
+
+        const job = application.job_id as any as IJob;
+        if (job.author_id.toString() !== userId) {
+            throw new ForbiddenError("Only the job owner can update application status");
+        }
+
+        application.status = status;
+        await application.save();
+
+        // If hired, we might want to close the job or mark it as in_progress
+        if (status === "hired") {
+            await Job.findByIdAndUpdate(job._id, { status: "in_progress" });
+        }
+
+        return application;
     }
 
     async deleteJob(jobId: string, userId: string): Promise<void> {

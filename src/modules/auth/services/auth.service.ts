@@ -137,6 +137,7 @@ export class AuthService {
     const tokens = this.generateTokens({
       userId: user._id.toString(),
       email: user.email,
+      role: user.role,
     });
 
     const { password_hash, ...userWithoutPassword } = user.toObject();
@@ -175,6 +176,7 @@ export class AuthService {
     const tokens = this.generateTokens({
       userId: user._id.toString(),
       email: user.email,
+      role: user.role,
     });
 
     const { password_hash, ...userWithoutPassword } = user.toObject();
@@ -241,6 +243,7 @@ export class AuthService {
       const token = this.generateAccessToken({
         userId: user._id.toString(),
         email: user.email,
+        role: user.role,
       });
 
       return { token };
@@ -249,14 +252,14 @@ export class AuthService {
     }
   }
 
-  private generateTokens(payload: { userId: string; email: string }) {
+  private generateTokens(payload: { userId: string; email: string; role: "user" | "admin" }) {
     return {
       token: this.generateAccessToken(payload),
-      refreshToken: this.generateRefreshToken(payload),
+      refreshToken: this.generateRefreshToken({ userId: payload.userId }),
     };
   }
 
-  private generateAccessToken(payload: { userId: string; email: string }): string {
+  private generateAccessToken(payload: { userId: string; email: string; role: "user" | "admin" }): string {
     const jwtSecret = process.env.JWT_SECRET;
     if (!jwtSecret) {
       throw new Error("JWT_SECRET is not defined");

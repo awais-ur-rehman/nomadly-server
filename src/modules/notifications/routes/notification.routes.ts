@@ -7,6 +7,7 @@ const router = Router();
 export const createNotificationRoutes = (
   notificationController: NotificationController
 ) => {
+  router.get("/", authenticate, notificationController.getMyNotifications);
   router.post("/test", authenticate, notificationController.sendTest);
 
   return router;

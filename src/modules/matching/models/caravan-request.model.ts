@@ -1,6 +1,6 @@
 import { Schema, model, type Document } from "mongoose";
 
-interface ICaravanRequest extends Document {
+export interface ICaravanRequest extends Document {
   requester_id: string;
   target_user_id: string;
   status: "pending" | "accepted" | "rejected";

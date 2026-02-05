@@ -3,6 +3,7 @@ import { Match } from "../models/match.model";
 import { Swipe } from "../models/swipe.model";
 import { Conversation } from "../../chat/models/conversation.model";
 import { Block } from "../../safety/models/block.model";
+import { CaravanRequest } from "../models/caravan-request.model";
 import { NotFoundError, ForbiddenError } from "../../../utils/errors";
 import { io } from "../../../server"; // Import socket instance
 import { rankCandidates } from "./scoring.engine";
@@ -241,5 +242,64 @@ export class MatchingService {
     }));
 
     return populatedMatches;
+  }
+
+  /**
+   * Caravan Joining Logic
+   */
+
+  async sendCaravanRequest(requesterId: string, targetUserId: string) {
+    if (requesterId === targetUserId) throw new Error("Cannot join your own caravan");
+
+    const targetUser = await User.findById(targetUserId);
+    if (!targetUser) throw new NotFoundError("User not found");
+
+    // Check for block
+    const blocked = await Block.findOne({
+      $or: [
+        { blocker_id: requesterId, blocked_id: targetUserId },
+        { blocked_id: requesterId, blocker_id: targetUserId },
+      ],
+    });
+    if (blocked) throw new ForbiddenError("Cannot request to join this user");
+
+    try {
+      const request = await CaravanRequest.create({
+        requester_id: requesterId,
+        target_user_id: targetUserId,
+        status: "pending"
+      });
+      return request;
+    } catch (error: any) {
+      if (error.code === 11000) throw new Error("Request already sent");
+      throw error;
+    }
+  }
+
+  async respondToCaravanRequest(requestId: string, userId: string, status: "accepted" | "rejected") {
+    const request = await CaravanRequest.findById(requestId);
+    if (!request) throw new NotFoundError("Request not found");
+
+    if (request.target_user_id.toString() !== userId) {
+      throw new ForbiddenError("Unauthorized to respond to this request");
+    }
+
+    request.status = status;
+    await request.save();
+
+    // If accepted, we could create a Match or just let them stay in 'request' state
+    // For now, let's keep it simple as per Req #2 (Join logic)
+    return request;
+  }
+
+  async getCaravanRequests(userId: string, type: "incoming" | "outgoing") {
+    const query = type === "incoming"
+      ? { target_user_id: userId }
+      : { requester_id: userId };
+
+    return CaravanRequest.find(query)
+      .populate("requester_id", "username profile.name profile.photo_url")
+      .populate("target_user_id", "username profile.name profile.photo_url")
+      .sort({ created_at: -1 });
   }
 }

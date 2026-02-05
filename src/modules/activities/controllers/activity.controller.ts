@@ -43,6 +43,12 @@ export class ActivityController {
     ApiResponse.success(res, activity, "Activity created successfully", 201);
   });
 
+  getActivity = asyncHandler(async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const activity = await this.activityService.getActivityById(id);
+    ApiResponse.success(res, activity);
+  });
+
   getNearby = asyncHandler(async (req: Request, res: Response) => {
     const lat = parseFloat(req.query.lat as string);
     const lng = parseFloat(req.query.lng as string);

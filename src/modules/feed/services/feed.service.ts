@@ -111,6 +111,48 @@ export class FeedService {
     }
 
     /**
+     * Get discover feed (posts from users the user does NOT follow)
+     */
+    async getDiscoverFeed(
+        userId: string,
+        page: number = 1,
+        limit: number = 20
+    ) {
+        // Get list of users this user already follows
+        const following = await Follow.find({
+            follower_id: userId,
+            status: "active",
+        }).select("following_id");
+
+        const followingIds = following.map((f) => f.following_id);
+        followingIds.push(new mongoose.Types.ObjectId(userId) as any);
+
+        const skip = (page - 1) * limit;
+
+        // Fetch posts from others
+        const posts = await Post.find({
+            author_id: { $nin: followingIds },
+        })
+            .sort({ created_at: -1 })
+            .skip(skip)
+            .limit(limit + 1)
+            .populate("author_id", "username profile.name profile.photo_url nomad_id.verified")
+            .lean();
+
+        const hasMore = posts.length > limit;
+        const result = posts.slice(0, limit);
+
+        return {
+            posts: result,
+            pagination: {
+                page,
+                limit,
+                hasMore,
+            },
+        };
+    }
+
+    /**
      * Get a single post by ID
      */
     async getPost(postId: string) {

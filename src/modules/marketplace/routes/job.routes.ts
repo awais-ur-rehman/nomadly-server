@@ -21,6 +21,18 @@ const createJobSchema = z.object({
     }),
 });
 
+const applyJobSchema = z.object({
+    body: z.object({
+        cover_letter: z.string().min(20),
+    }),
+});
+
+const updateApplicationStatusSchema = z.object({
+    body: z.object({
+        status: z.enum(["pending", "interview", "hired", "rejected"]),
+    }),
+});
+
 export const createJobRoutes = (jobController: JobController) => {
     router.post(
         "/",
@@ -34,6 +46,27 @@ export const createJobRoutes = (jobController: JobController) => {
     router.get("/:id", authenticate, jobController.getJob);
 
     router.delete("/:id", authenticate, jobController.deleteJob);
+
+    // Applications
+    router.post(
+        "/:id/apply",
+        authenticate,
+        validate(applyJobSchema),
+        jobController.applyForJob
+    );
+
+    router.get(
+        "/:id/applications",
+        authenticate,
+        jobController.getJobApplications
+    );
+
+    router.patch(
+        "/applications/:applicationId",
+        authenticate,
+        validate(updateApplicationStatusSchema),
+        jobController.updateApplicationStatus
+    );
 
     return router;
 };
