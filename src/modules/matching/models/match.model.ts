@@ -12,7 +12,6 @@ interface IMatch extends Document {
 const matchSchema = new Schema<IMatch>(
   {
     users: [{ type: Schema.Types.ObjectId as any, ref: "User", required: true }],
-    // Separate fields for unique constraint - stored in sorted order
     user1: { type: Schema.Types.ObjectId as any, ref: "User", required: true },
     user2: { type: Schema.Types.ObjectId as any, ref: "User", required: true },
     initiated_by: { type: Schema.Types.ObjectId as any, ref: "User", required: true },
