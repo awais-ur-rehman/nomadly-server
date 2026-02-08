@@ -90,4 +90,32 @@ export class JobController {
         const application = await this.jobService.updateApplicationStatus(applicationId, req.user.userId, status);
         ApiResponse.success(res, application, "Application status updated");
     });
+
+    getMyApplications = asyncHandler(async (req: Request, res: Response) => {
+        if (!req.user) throw new Error("User not authenticated");
+
+        const page = parseInt(req.query.page as string) || 1;
+        const limit = parseInt(req.query.limit as string) || 20;
+
+        const { applications, total } = await this.jobService.getMyApplications(
+            req.user.userId,
+            { page, limit }
+        );
+
+        ApiResponse.paginated(res, applications, page, limit, total);
+    });
+
+    getMyJobs = asyncHandler(async (req: Request, res: Response) => {
+        if (!req.user) throw new Error("User not authenticated");
+
+        const page = parseInt(req.query.page as string) || 1;
+        const limit = parseInt(req.query.limit as string) || 20;
+
+        const { jobs, total } = await this.jobService.getMyJobs(
+            req.user.userId,
+            { page, limit }
+        );
+
+        ApiResponse.paginated(res, jobs, page, limit, total);
+    });
 }

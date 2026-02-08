@@ -2,6 +2,7 @@ import { Job, type IJob } from "../models/job.model";
 import { User } from "../../users/models/user.model";
 import { JobApplication, type IJobApplication } from "../models/job-application.model";
 import { ForbiddenError, NotFoundError } from "../../../utils/errors";
+import { NotificationService } from "../../notifications/services/notification.service";
 
 interface SearchJobsFilters {
     category?: string[];
@@ -11,6 +12,12 @@ interface SearchJobsFilters {
 }
 
 export class JobService {
+    private notificationService: NotificationService;
+
+    constructor() {
+        this.notificationService = new NotificationService();
+    }
+
     async createJob(
         authorId: string,
         data: {
@@ -116,12 +123,26 @@ export class JobService {
         if (job.status !== "open") throw new Error("Job is no longer open for applications");
         if (job.author_id.toString() === applicantId) throw new Error("You cannot apply to your own job");
 
+        // Get applicant info for notification
+        const applicant = await User.findById(applicantId).select("username profile.name");
+
         try {
             const application = await JobApplication.create({
                 job_id: jobId,
                 applicant_id: applicantId,
                 cover_letter: coverLetter,
             });
+
+            // Send notification to job author
+            const applicantName = applicant?.profile?.name || applicant?.username || "Someone";
+            await this.notificationService.sendJobApplicationNotification(
+                job.author_id.toString(),
+                applicantName,
+                job.title,
+                jobId,
+                applicantId
+            );
+
             return application;
         } catch (error: any) {
             if (error.code === 11000) throw new Error("You have already applied for this job");
@@ -156,12 +177,23 @@ export class JobService {
             throw new ForbiddenError("Only the job owner can update application status");
         }
 
+        const previousStatus = application.status;
         application.status = status;
         await application.save();
 
         // If hired, we might want to close the job or mark it as in_progress
         if (status === "hired") {
             await Job.findByIdAndUpdate(job._id, { status: "in_progress" });
+        }
+
+        // Send notification to applicant if status changed (not for pending)
+        if (status !== "pending" && status !== previousStatus) {
+            await this.notificationService.sendApplicationStatusNotification(
+                application.applicant_id.toString(),
+                job.title,
+                status,
+                job._id.toString()
+            );
         }
 
         return application;
@@ -174,5 +206,58 @@ export class JobService {
             throw new Error("Unauthorized");
         }
         await job.deleteOne();
+    }
+
+    async getMyApplications(
+        userId: string,
+        pagination: { page: number; limit: number }
+    ): Promise<{ applications: IJobApplication[]; total: number }> {
+        const skip = (pagination.page - 1) * pagination.limit;
+
+        const [applications, total] = await Promise.all([
+            JobApplication.find({ applicant_id: userId })
+                .populate({
+                    path: "job_id",
+                    select: "title description category budget budget_type status created_at",
+                    populate: {
+                        path: "author_id",
+                        select: "username profile.photo_url",
+                    },
+                })
+                .skip(skip)
+                .limit(pagination.limit)
+                .sort({ created_at: -1 }),
+            JobApplication.countDocuments({ applicant_id: userId }),
+        ]);
+
+        return { applications, total };
+    }
+
+    async getMyJobs(
+        userId: string,
+        pagination: { page: number; limit: number }
+    ): Promise<{ jobs: any[]; total: number }> {
+        const skip = (pagination.page - 1) * pagination.limit;
+
+        const [jobs, total] = await Promise.all([
+            Job.find({ author_id: userId })
+                .skip(skip)
+                .limit(pagination.limit)
+                .sort({ created_at: -1 }),
+            Job.countDocuments({ author_id: userId }),
+        ]);
+
+        // Get application counts for each job
+        const jobsWithCounts = await Promise.all(
+            jobs.map(async (job) => {
+                const applicationCount = await JobApplication.countDocuments({ job_id: job._id });
+                return {
+                    ...job.toObject(),
+                    application_count: applicationCount,
+                };
+            })
+        );
+
+        return { jobs: jobsWithCounts, total };
     }
 }

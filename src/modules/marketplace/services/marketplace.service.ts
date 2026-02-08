@@ -2,13 +2,25 @@ import { User } from "../../users/models/user.model";
 import { Consultation } from "../models/consultation.model";
 import { Review } from "../models/review.model";
 import { NotFoundError, ValidationError } from "../../../utils/errors";
+import { NotificationService } from "../../notifications/services/notification.service";
 
 export class MarketplaceService {
+  private notificationService: NotificationService;
+
+  constructor() {
+    this.notificationService = new NotificationService();
+  }
+
   async searchBuilders(filters: any, pagination: { page: number; limit: number }): Promise<{ builders: any[]; total: number }> {
     const query: any = {
       is_builder: true,
       is_active: true,
-      "builder_profile.availability_status": "available",
+      // Include builders who are available OR haven't set their status yet (defaults to available)
+      $or: [
+        { "builder_profile.availability_status": "available" },
+        { "builder_profile.availability_status": { $exists: false } },
+        { "builder_profile.availability_status": null },
+      ],
     };
 
     if (filters.specialty) {
@@ -42,6 +54,9 @@ export class MarketplaceService {
       throw new NotFoundError("Builder not found");
     }
 
+    // Get requester info for notification
+    const requester = await User.findById(requesterId).select("username profile.name");
+
     const consultation = await Consultation.create({
       requester_id: requesterId,
       builder_id: builderId,
@@ -49,6 +64,16 @@ export class MarketplaceService {
       status: "pending",
       payment_status: "unpaid",
     });
+
+    // Send notification to builder
+    const requesterName = requester?.profile?.name || requester?.username || "Someone";
+    await this.notificationService.sendConsultationRequestNotification(
+      builderId,
+      requesterName,
+      specialty,
+      consultation._id.toString(),
+      requesterId
+    );
 
     return consultation;
   }
@@ -66,7 +91,33 @@ export class MarketplaceService {
     consultation.status = "accepted";
     await consultation.save();
 
+    // Get builder info for notification
+    const builder = await User.findById(builderId).select("username profile.name builder_profile.business_name");
+    const builderName = builder?.builder_profile?.business_name || builder?.profile?.name || builder?.username || "A builder";
+
+    // Send notification to requester
+    await this.notificationService.sendConsultationAcceptedNotification(
+      consultation.requester_id.toString(),
+      builderName,
+      consultationId,
+      builderId
+    );
+
     return consultation;
+  }
+
+  async getBuilderReviews(builderId: string, pagination: { page: number; limit: number }): Promise<{ reviews: any[]; total: number }> {
+    const skip = (pagination.page - 1) * pagination.limit;
+
+    const reviews = await Review.find({ builder_id: builderId })
+      .populate("reviewer_id", "profile.name profile.photo_url username")
+      .skip(skip)
+      .limit(pagination.limit)
+      .sort({ created_at: -1 });
+
+    const total = await Review.countDocuments({ builder_id: builderId });
+
+    return { reviews, total };
   }
 
   async createReview(
@@ -93,6 +144,9 @@ export class MarketplaceService {
       throw new ValidationError("Review already exists for this consultation");
     }
 
+    // Get reviewer info for notification
+    const reviewer = await User.findById(reviewerId).select("username profile.name");
+
     const review = await Review.create({
       consultation_id: consultationId,
       reviewer_id: reviewerId,
@@ -100,6 +154,16 @@ export class MarketplaceService {
       rating,
       comment,
     });
+
+    // Send notification to builder
+    const reviewerName = reviewer?.profile?.name || reviewer?.username || "Someone";
+    await this.notificationService.sendNewReviewNotification(
+      consultation.builder_id.toString(),
+      reviewerName,
+      rating,
+      review._id.toString(),
+      reviewerId
+    );
 
     return review;
   }

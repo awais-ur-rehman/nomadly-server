@@ -43,6 +43,10 @@ export const createJobRoutes = (jobController: JobController) => {
 
     router.get("/", authenticate, jobController.searchJobs);
 
+    // User's own jobs and applications - must be before /:id route
+    router.get("/mine", authenticate, jobController.getMyJobs);
+    router.get("/applications/mine", authenticate, jobController.getMyApplications);
+
     router.get("/:id", authenticate, jobController.getJob);
 
     router.delete("/:id", authenticate, jobController.deleteJob);

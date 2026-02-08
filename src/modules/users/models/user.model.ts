@@ -29,10 +29,12 @@ export interface IUser extends Document {
   };
   is_builder: boolean;
   builder_profile?: {
+    business_name?: string;
     specialty_tags: string[];
     hourly_rate: number;
     availability_status: "available" | "busy";
     bio: string;
+    portfolio_images?: string[];
   };
   nomad_id: {
     verified: boolean;
@@ -154,6 +156,7 @@ const userSchema = new Schema<IUser>(
     },
     is_builder: { type: Boolean, default: false },
     builder_profile: {
+      business_name: { type: String },
       specialty_tags: { type: [String], default: [] },
       hourly_rate: { type: Number, default: 0 },
       availability_status: {
@@ -162,6 +165,7 @@ const userSchema = new Schema<IUser>(
         default: "available",
       },
       bio: { type: String },
+      portfolio_images: { type: [String], default: [] },
     },
     nomad_id: {
       verified: { type: Boolean, default: false },

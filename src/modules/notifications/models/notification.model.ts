@@ -1,10 +1,22 @@
 import { Schema, model, type Document } from "mongoose";
 
+export type NotificationType =
+    | "match"
+    | "message"
+    | "activity_approval"
+    | "vouch"
+    | "system"
+    | "job_application"
+    | "application_status"
+    | "consultation_request"
+    | "consultation_accepted"
+    | "new_review";
+
 export interface INotification extends Document {
     user_id: Schema.Types.ObjectId;
     title: string;
     body: string;
-    type: "match" | "message" | "activity_approval" | "vouch" | "system";
+    type: NotificationType;
     data?: any;
     is_read: boolean;
     created_at: Date;
@@ -18,7 +30,18 @@ const notificationSchema = new Schema<INotification>(
         body: { type: String, required: true },
         type: {
             type: String,
-            enum: ["match", "message", "activity_approval", "vouch", "system"],
+            enum: [
+                "match",
+                "message",
+                "activity_approval",
+                "vouch",
+                "system",
+                "job_application",
+                "application_status",
+                "consultation_request",
+                "consultation_accepted",
+                "new_review",
+            ],
             required: true,
         },
         data: { type: Schema.Types.Mixed },
