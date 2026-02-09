@@ -60,9 +60,13 @@ export class ActivityController {
       throw new Error("Latitude and longitude are required");
     }
 
+    // Pass current user ID to exclude their own activities from nearby results
+    const currentUserId = req.user?.userId;
+
     const activities = await this.activityService.getNearbyActivities(
       { lat, lng },
-      maxDistance
+      maxDistance,
+      currentUserId
     );
     ApiResponse.success(res, activities);
   });

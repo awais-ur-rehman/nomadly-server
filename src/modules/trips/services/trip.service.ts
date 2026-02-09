@@ -1,5 +1,8 @@
 import { Trip } from "../models/trip.model";
 import { NotFoundError, ValidationError } from "../../../utils/errors";
+import pino from "pino";
+
+const logger = pino();
 
 export class TripService {
   async createTrip(creatorId: string, tripData: any): Promise<any> {
@@ -53,10 +56,14 @@ export class TripService {
   }
 
   async getMyTrips(userId: string): Promise<any[]> {
+    logger.info({ userId }, "getMyTrips called");
     const trips = await Trip.find({ creator_id: userId })
       .populate("creator_id", "username profile nomad_id")
       .populate("companions", "username profile nomad_id")
+      .populate("interested_users.user_id", "username profile nomad_id")
       .sort({ created_at: -1 });
+
+    logger.info({ count: trips.length }, "getMyTrips results");
 
     return trips.map(trip => {
       const tripObj = trip.toObject();
@@ -74,6 +81,7 @@ export class TripService {
       status: { $in: ["planning", "active"] }
     })
       .populate("creator_id", "username profile nomad_id")
+      .populate("companions", "username profile nomad_id")
       .sort({ start_date: 1 });
 
     return trips;
@@ -87,7 +95,7 @@ export class TripService {
     // Convert meters to radians for $centerSphere (Earth radius ~6378100 meters)
     const radiusInRadians = maxDistance / 6378100;
 
-    const trips = await Trip.find({
+    const query: any = {
       $or: [
         {
           origin: {
@@ -108,10 +116,23 @@ export class TripService {
       visibility: "public",
       looking_for_companions: true,
       start_date: { $gte: new Date() },
-    })
+    };
+
+    // Exclude current user's own trips
+    if (currentUserId) {
+      query.creator_id = { $ne: currentUserId };
+    }
+
+    logger.info({ query: JSON.stringify(query), currentUserId }, "getNearbyTrips query");
+
+    const trips = await Trip.find(query)
       .populate("creator_id", "username profile nomad_id rig")
+      .populate("companions", "username profile nomad_id")
+      .populate("interested_users.user_id", "username profile nomad_id")
       .sort({ start_date: 1 })
       .limit(50);
+
+    logger.info({ count: trips.length }, "getNearbyTrips results");
 
     return trips.map(trip => {
       const tripObj = trip.toObject();

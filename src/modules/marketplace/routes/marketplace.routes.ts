@@ -43,6 +43,11 @@ export const createMarketplaceRoutes = (
     validate(createReviewSchema),
     marketplaceController.createReview
   );
+  router.get(
+    "/consultations/mine",
+    authenticate,
+    marketplaceController.getMyConsultations
+  );
 
   return router;
 };
