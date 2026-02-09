@@ -4,21 +4,39 @@ import { logger } from "../../../utils/logger";
 
 export class PaymentService {
   async handleRevenueCatWebhook(event: any) {
-    logger.info({ event }, "RevenueCat webhook received");
+    logger.info("--------------- REVENUECAT WEBHOOK RECEIVED ---------------");
+    logger.info({ event }, "Full Webhook Event Payload");
 
-    const { event_type, app_user_id, product_id } = event;
+    const { event_type, app_user_id, product_id, subscriber_attributes } = event;
 
-    switch (event_type) {
-      case "INITIAL_PURCHASE":
-      case "RENEWAL":
-        await this.activateSubscription(app_user_id, product_id);
-        break;
-      case "CANCELLATION":
-      case "EXPIRATION":
-        await this.deactivateSubscription(app_user_id);
-        break;
-      default:
-        logger.warn({ event_type }, "Unknown RevenueCat event type");
+    logger.info(`Event Type: ${event_type}`);
+    logger.info(`App User ID: ${app_user_id}`);
+    logger.info(`Product ID: ${product_id}`);
+
+    if (subscriber_attributes) {
+      logger.info({ subscriber_attributes }, "Subscriber Attributes");
+    }
+
+    try {
+      switch (event_type) {
+        case "INITIAL_PURCHASE":
+        case "RENEWAL":
+          logger.info(`Processing activation for User ${app_user_id} with Product ${product_id}`);
+          await this.activateSubscription(app_user_id, product_id);
+          break;
+        case "CANCELLATION":
+        case "EXPIRATION":
+          logger.info(`Processing deactivation for User ${app_user_id}`);
+          await this.deactivateSubscription(app_user_id);
+          break;
+        case "TEST":
+          logger.info("Test event received");
+          break;
+        default:
+          logger.warn({ event_type }, "Unknown or unhandled RevenueCat event type");
+      }
+    } catch (error) {
+      logger.error({ error }, "Error processing webhook");
     }
   }
 

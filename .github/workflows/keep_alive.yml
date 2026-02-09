@@ -1,0 +1,24 @@
+name: Keep Backend Alive
+
+on:
+  schedule:
+    # Run every 14 minutes (Render sleeps after 15 mins of inactivity)
+    - cron: '*/14 * * * *'
+  workflow_dispatch: # Allows manual run
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Backend Health Endpoint
+        run: |
+          # Replace with your actual Render Backend URL
+          # We use the variable if set, otherwise fail or warn
+          if [ -z "${{ secrets.RENDER_BACKEND_URL }}" ]; then
+            echo "URL not set in secrets. Please set RENDER_BACKEND_URL in GitHub Secrets."
+            echo "Example: https://nomadly-backend.onrender.com"
+            exit 1
+          else
+            echo "Pinging ${{ secrets.RENDER_BACKEND_URL }}/health"
+            curl -I "${{ secrets.RENDER_BACKEND_URL }}/health"
+          fi
