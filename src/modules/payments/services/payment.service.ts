@@ -7,7 +7,12 @@ export class PaymentService {
     logger.info("--------------- REVENUECAT WEBHOOK RECEIVED ---------------");
     logger.info({ event }, "Full Webhook Event Payload");
 
-    const { event_type, app_user_id, product_id, subscriber_attributes } = event;
+    // Fix: RevenueCat payload sends data inside an 'event' object
+    // Structure: { event: { type: '...', ... }, api_version: '...' }
+    const eventData = event.event || event;
+
+    const { type, app_user_id, product_id, subscriber_attributes } = eventData;
+    const event_type = type; // Map 'type' to 'event_type' for internal consistency
 
     logger.info(`Event Type: ${event_type}`);
     logger.info(`App User ID: ${app_user_id}`);
@@ -21,11 +26,19 @@ export class PaymentService {
       switch (event_type) {
         case "INITIAL_PURCHASE":
         case "RENEWAL":
+          if (!app_user_id || !product_id) {
+            logger.warn("Missing app_user_id or product_id for activation");
+            return;
+          }
           logger.info(`Processing activation for User ${app_user_id} with Product ${product_id}`);
           await this.activateSubscription(app_user_id, product_id);
           break;
         case "CANCELLATION":
         case "EXPIRATION":
+          if (!app_user_id) {
+            logger.warn("Missing app_user_id for deactivation");
+            return;
+          }
           logger.info(`Processing deactivation for User ${app_user_id}`);
           await this.deactivateSubscription(app_user_id);
           break;
