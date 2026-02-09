@@ -1,0 +1,51 @@
+# Dependencies
+node_modules
+npm-debug.log
+
+# Build output (will be regenerated)
+dist
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Version control
+.git
+.gitignore
+
+# Docker files (prevent recursive copy)
+.dockerignore
+Dockerfile
+docker-compose.yml
+
+# Documentation (not needed at runtime, but keep tsconfig.json!)
+README.md
+API_DOCUMENTATION.md
+
+# IDE and editor
+.cursor
+.agents
+.gemini
+.vscode
+.idea
+
+# Linting/formatting configs (not needed for build)
+.eslintrc.json
+.prettierrc
+
+# Logs
+*.log
+
+# Test files
+coverage
+.nyc_output
+tests
+jest.config.js
+
+# Keep these files for build:
+# - tsconfig.json (required for TypeScript compilation)
+# - package.json (required for npm)
+# - package-lock.json (required for npm ci)
+# - src/ (source code)
+# - documents/ (swagger config)

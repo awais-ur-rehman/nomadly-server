@@ -28,6 +28,8 @@ export class UploadService {
       activity: "nomadly/activity-images",
       rig: "nomadly/rig-images",
       chat: "nomadly/chat-images",
+      feed: "nomadly/feed-images",
+      story: "nomadly/story-images",
       default: "nomadly/uploads",
     };
 

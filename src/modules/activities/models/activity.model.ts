@@ -2,6 +2,7 @@ import { Schema, model, type Document } from "mongoose";
 
 interface IActivity extends Document {
   host_id: string;
+  title: string;
   activity_type: string;
   location: {
     type: "Point";
@@ -20,6 +21,7 @@ interface IActivity extends Document {
 const activitySchema = new Schema<IActivity>(
   {
     host_id: { type: Schema.Types.ObjectId as any, required: true, ref: "User" },
+    title: { type: String, required: true },
     activity_type: { type: String, required: true },
     location: {
       type: {

@@ -8,98 +8,197 @@ import { swaggerSpec } from "../documents/swagger";
 import { errorHandler } from "./middleware/error-handler";
 import { requestLogger } from "./middleware/logger";
 import { apiLimiter } from "./middleware/rate-limit";
+import { xssSanitize, noSqlSanitize } from "./middleware/sanitize";
 
+// Routes
 import { createAuthRoutes } from "./modules/auth/routes/auth.routes";
 import { createUserRoutes } from "./modules/users/routes/user.routes";
 import { createMatchingRoutes } from "./modules/matching/routes/matching.routes";
 import { createActivityRoutes } from "./modules/activities/routes/activity.routes";
 import { createMarketplaceRoutes } from "./modules/marketplace/routes/marketplace.routes";
+import { createJobRoutes } from "./modules/marketplace/routes/job.routes";
 import { createChatRoutes } from "./modules/chat/routes/chat.routes";
 import { createVouchingRoutes } from "./modules/vouching/routes/vouching.routes";
 import { createPaymentRoutes } from "./modules/payments/routes/payment.routes";
 import { createNotificationRoutes } from "./modules/notifications/routes/notification.routes";
 import { createUploadRoutes } from "./modules/upload/routes/upload.routes";
+import { createFeedRoutes } from "./modules/feed/routes/feed.routes";
+import { createStoryRoutes } from "./modules/stories/routes/story.routes";
+import { createSafetyRoutes } from "./modules/safety/routes/safety.routes";
+import { createInviteRoutes } from "./modules/invite/routes/invite.routes";
+import { createVerificationRoutes } from "./modules/verification/routes/verification.routes";
+import { createTripRoutes } from "./modules/trips/routes/trip.routes";
 
+// Services
 import { AuthService } from "./modules/auth/services/auth.service";
 import { UserService } from "./modules/users/services/user.service";
 import { MatchingService } from "./modules/matching/services/matching.service";
 import { ActivityService } from "./modules/activities/services/activity.service";
 import { MarketplaceService } from "./modules/marketplace/services/marketplace.service";
+import { JobService } from "./modules/marketplace/services/job.service";
 import { ChatService } from "./modules/chat/services/chat.service";
 import { VouchingService } from "./modules/vouching/services/vouching.service";
 import { PaymentService } from "./modules/payments/services/payment.service";
 import { NotificationService } from "./modules/notifications/services/notification.service";
 import { UploadService } from "./modules/upload/services/upload.service";
+import { FeedService } from "./modules/feed/services/feed.service";
+import { StoryService } from "./modules/stories/services/story.service";
+import { SafetyService } from "./modules/safety/services/safety.service";
+import { InviteService } from "./modules/invite/services/invite.service";
+import { VerificationService } from "./modules/verification/services/verification.service";
+import { TripService } from "./modules/trips/services/trip.service";
 
+// Controllers
 import { AuthController } from "./modules/auth/controllers/auth.controller";
 import { UserController } from "./modules/users/controllers/user.controller";
 import { MatchingController } from "./modules/matching/controllers/matching.controller";
 import { ActivityController } from "./modules/activities/controllers/activity.controller";
 import { MarketplaceController } from "./modules/marketplace/controllers/marketplace.controller";
+import { JobController } from "./modules/marketplace/controllers/job.controller";
 import { ChatController } from "./modules/chat/controllers/chat.controller";
 import { VouchingController } from "./modules/vouching/controllers/vouching.controller";
 import { PaymentController } from "./modules/payments/controllers/payment.controller";
 import { NotificationController } from "./modules/notifications/controllers/notification.controller";
 import { UploadController } from "./modules/upload/controllers/upload.controller";
+import { FeedController } from "./modules/feed/controllers/feed.controller";
+import { StoryController } from "./modules/stories/controllers/story.controller";
+import { SafetyController } from "./modules/safety/controllers/safety.controller";
+import { InviteController } from "./modules/invite/controllers/invite.controller";
+import { VerificationController } from "./modules/verification/controllers/verification.controller";
+import { TripController } from "./modules/trips/controllers/trip.controller";
 
 export const createApp = () => {
   const app = express();
 
-  app.use(helmet());
+  // Security middleware
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          scriptSrc: ["'self'", "'unsafe-inline'"], // unsafe-inline needed for swagger
+          styleSrc: ["'self'", "'unsafe-inline'"],
+          imgSrc: ["'self'", "data:", "https://res.cloudinary.com"],
+        },
+      },
+      hsts: {
+        maxAge: 31536000,
+        includeSubDomains: true,
+        preload: true,
+      },
+    })
+  );
   app.use(
     cors({
-      origin: process.env.ALLOWED_ORIGINS?.split(",") || "*",
+      origin: process.env.ALLOWED_ORIGINS?.split(",") || false,
       credentials: true,
+      methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+      allowedHeaders: ["Content-Type", "Authorization"],
+      maxAge: 86400,
     })
   );
   app.use(compression());
   app.use(express.json({ limit: "10mb" }));
   app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+
+  // Input sanitization - prevent NoSQL injection and XSS
+  app.use(noSqlSanitize);
+  app.use(xssSanitize);
+
   app.use(requestLogger);
   app.use(apiLimiter);
 
+  // Health check endpoint
   app.get("/health", (_req: Request, res: Response) => {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
   });
 
+  // Swagger API documentation
   app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
     customCss: ".swagger-ui .topbar { display: none }",
     customSiteTitle: "Nomadly API Documentation",
   }));
 
+  // Initialize services
   const authService = new AuthService();
   const userService = new UserService();
   const matchingService = new MatchingService();
   const activityService = new ActivityService();
   const marketplaceService = new MarketplaceService();
+  const jobService = new JobService();
   const chatService = new ChatService();
   const vouchingService = new VouchingService();
   const paymentService = new PaymentService();
   const notificationService = new NotificationService();
   const uploadService = new UploadService();
+  const feedService = new FeedService();
+  const storyService = new StoryService();
+  const safetyService = new SafetyService();
+  const inviteService = new InviteService();
+  const verificationService = new VerificationService();
+  const tripService = new TripService();
 
+  // Initialize controllers
   const authController = new AuthController(authService);
   const userController = new UserController(userService);
   const matchingController = new MatchingController(matchingService);
   const activityController = new ActivityController(activityService);
   const marketplaceController = new MarketplaceController(marketplaceService);
+  const jobController = new JobController(jobService);
   const chatController = new ChatController(chatService);
   const vouchingController = new VouchingController(vouchingService);
   const paymentController = new PaymentController(paymentService);
   const notificationController = new NotificationController(notificationService);
   const uploadController = new UploadController(uploadService);
+  const feedController = new FeedController(feedService);
+  const storyController = new StoryController(storyService);
+  const safetyController = new SafetyController(safetyService);
+  const inviteController = new InviteController(inviteService);
+  const verificationController = new VerificationController(verificationService);
+  const tripController = new TripController(tripService);
 
+  // API v1 Routes (new versioned API)
+  app.use("/api/v1/auth", createAuthRoutes(authController));
+  app.use("/api/v1/users", createUserRoutes(userController));
+  app.use("/api/v1/discovery", createMatchingRoutes(matchingController));
+  app.use("/api/v1/matching", createMatchingRoutes(matchingController));
+  app.use("/api/v1/beacons", createActivityRoutes(activityController));
+  app.use("/api/v1/activities", createActivityRoutes(activityController));
+  app.use("/api/v1/marketplace", createMarketplaceRoutes(marketplaceController));
+  app.use("/api/v1/jobs", createJobRoutes(jobController));
+  app.use("/api/v1/chat", createChatRoutes(chatController));
+  app.use("/api/v1/vouch", createVouchingRoutes(vouchingController));
+  app.use("/api/v1/payments", createPaymentRoutes(paymentController));
+  app.use("/api/v1/notifications", createNotificationRoutes(notificationController));
+  app.use("/api/v1/upload", createUploadRoutes(uploadController));
+  app.use("/api/v1/feed", createFeedRoutes(feedController));
+  app.use("/api/v1/stories", createStoryRoutes(storyController));
+  app.use("/api/v1/safety", createSafetyRoutes(safetyController));
+  app.use("/api/v1/invite", createInviteRoutes(inviteController));
+  app.use("/api/v1/verification", createVerificationRoutes(verificationController));
+  app.use("/api/v1/trips", createTripRoutes(tripController));
+
+  // Legacy API Routes (backward compatibility)
   app.use("/api/auth", createAuthRoutes(authController));
   app.use("/api/users", createUserRoutes(userController));
   app.use("/api/matches", createMatchingRoutes(matchingController));
   app.use("/api/activities", createActivityRoutes(activityController));
   app.use("/api/marketplace", createMarketplaceRoutes(marketplaceController));
+  app.use("/api/jobs", createJobRoutes(jobController));
   app.use("/api/chat", createChatRoutes(chatController));
   app.use("/api/vouch", createVouchingRoutes(vouchingController));
   app.use("/api/payments", createPaymentRoutes(paymentController));
   app.use("/api/notifications", createNotificationRoutes(notificationController));
   app.use("/api/upload", createUploadRoutes(uploadController));
+  app.use("/api/feed", createFeedRoutes(feedController));
+  app.use("/api/stories", createStoryRoutes(storyController));
+  app.use("/api/beacons", createActivityRoutes(activityController));
+  app.use("/api/safety", createSafetyRoutes(safetyController));
+  app.use("/api/invite", createInviteRoutes(inviteController));
+  app.use("/api/verification", createVerificationRoutes(verificationController));
+  app.use("/api/trips", createTripRoutes(tripController));
 
+  // 404 handler
   app.use((_req: Request, res: Response) => {
     res.status(404).json({
       status: "error",
@@ -107,6 +206,7 @@ export const createApp = () => {
     });
   });
 
+  // Global error handler
   app.use(errorHandler);
 
   return app;

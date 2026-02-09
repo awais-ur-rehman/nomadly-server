@@ -4,18 +4,49 @@ import { ApiResponse } from "../../../utils/response";
 import { asyncHandler } from "../../../middleware/error-handler";
 
 export class ActivityController {
-  constructor(private activityService: ActivityService) {}
+  constructor(private activityService: ActivityService) { }
 
   createActivity = asyncHandler(async (req: Request, res: Response) => {
     if (!req.user) {
       throw new Error("User not authenticated");
     }
 
+    const {
+      activity_type, type,
+      location,
+      max_participants, maxParticipants,
+      event_time, startTime,
+      description, title,
+      verified_only
+    } = req.body;
+
+    const payload = {
+      title,
+      activity_type: activity_type || type,
+      location: {
+        type: "Point" as const,
+        coordinates: [
+          Number(location.lng || location.longitude),
+          Number(location.lat || location.latitude)
+        ] as [number, number]
+      },
+      max_participants: max_participants || maxParticipants,
+      event_time: event_time || startTime,
+      description: description,
+      verified_only
+    };
+
     const activity = await this.activityService.createActivity(
       req.user.userId,
-      req.body
+      payload
     );
     ApiResponse.success(res, activity, "Activity created successfully", 201);
+  });
+
+  getActivity = asyncHandler(async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const activity = await this.activityService.getActivityById(id);
+    ApiResponse.success(res, activity);
   });
 
   getNearby = asyncHandler(async (req: Request, res: Response) => {
@@ -29,9 +60,13 @@ export class ActivityController {
       throw new Error("Latitude and longitude are required");
     }
 
+    // Pass current user ID to exclude their own activities from nearby results
+    const currentUserId = req.user?.userId;
+
     const activities = await this.activityService.getNearbyActivities(
       { lat, lng },
-      maxDistance
+      maxDistance,
+      currentUserId
     );
     ApiResponse.success(res, activities);
   });
@@ -72,5 +107,64 @@ export class ActivityController {
       userId
     );
     ApiResponse.success(res, activity, "Participant rejected");
+  });
+
+  getMyHosted = asyncHandler(async (req: Request, res: Response) => {
+    if (!req.user) {
+      throw new Error("User not authenticated");
+    }
+
+    const activities = await this.activityService.getMyHostedActivities(
+      req.user.userId
+    );
+    ApiResponse.success(res, activities);
+  });
+
+  getMyJoined = asyncHandler(async (req: Request, res: Response) => {
+    if (!req.user) {
+      throw new Error("User not authenticated");
+    }
+
+    const activities = await this.activityService.getMyJoinedActivities(
+      req.user.userId
+    );
+    ApiResponse.success(res, activities);
+  });
+
+  updateActivity = asyncHandler(async (req: Request, res: Response) => {
+    if (!req.user) {
+      throw new Error("User not authenticated");
+    }
+
+    const { id } = req.params;
+    const activity = await this.activityService.updateActivity(
+      id,
+      req.user.userId,
+      req.body
+    );
+    ApiResponse.success(res, activity, "Activity updated successfully");
+  });
+
+  deleteActivity = asyncHandler(async (req: Request, res: Response) => {
+    if (!req.user) {
+      throw new Error("User not authenticated");
+    }
+
+    const { id } = req.params;
+    await this.activityService.deleteActivity(id, req.user.userId);
+    ApiResponse.success(res, null, "Activity deleted successfully");
+  });
+
+  leaveActivity = asyncHandler(async (req: Request, res: Response) => {
+    if (!req.user) {
+      throw new Error("User not authenticated");
+    }
+
+    const { id } = req.params;
+    const activity = await this.activityService.leaveActivity(
+      id,
+      req.user.userId
+    );
+    ApiResponse.success(res, activity, "Left activity successfully");
   });
 }

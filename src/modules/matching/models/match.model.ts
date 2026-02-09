@@ -1,30 +1,31 @@
 import { Schema, model, type Document } from "mongoose";
 
 interface IMatch extends Document {
-  user_id: string;
-  matched_user_id: string;
-  swipe_action: "left" | "right" | "star";
-  is_mutual: boolean;
+  users: string[];
+  user1: string;  // First user (alphabetically sorted ObjectId)
+  user2: string;  // Second user (alphabetically sorted ObjectId)
+  initiated_by: string;
+  conversation_id: string;
   created_at: Date;
 }
 
 const matchSchema = new Schema<IMatch>(
   {
-    user_id: { type: Schema.Types.ObjectId as any, required: true, ref: "User" },
-    matched_user_id: { type: Schema.Types.ObjectId as any, required: true, ref: "User" },
-    swipe_action: {
-      type: String,
-      enum: ["left", "right", "star"],
-      required: true,
-    },
-    is_mutual: { type: Boolean, default: false },
+    users: [{ type: Schema.Types.ObjectId as any, ref: "User", required: true }],
+    user1: { type: Schema.Types.ObjectId as any, ref: "User", required: true },
+    user2: { type: Schema.Types.ObjectId as any, ref: "User", required: true },
+    initiated_by: { type: Schema.Types.ObjectId as any, ref: "User", required: true },
+    conversation_id: { type: Schema.Types.ObjectId as any, ref: "Conversation", required: true },
   },
   {
     timestamps: { createdAt: "created_at", updatedAt: false },
   }
 );
 
-matchSchema.index({ user_id: 1, matched_user_id: 1 }, { unique: true });
-matchSchema.index({ user_id: 1, is_mutual: 1 });
+// Compound unique index on the sorted user pair - ensures same two users can only match once
+matchSchema.index({ user1: 1, user2: 1 }, { unique: true });
+
+// Index for looking up matches by user
+matchSchema.index({ users: 1 });
 
 export const Match = model<IMatch>("Match", matchSchema);

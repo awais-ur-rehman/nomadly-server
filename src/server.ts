@@ -5,6 +5,7 @@ import { createServer } from "http";
 import { Server } from "socket.io";
 import { createApp } from "./app";
 import { connectDB, closeDatabase } from "./config/database";
+import { connectRedis, closeRedisConnection, getRedisClient } from "./config/redis";
 import { logger } from "./utils/logger";
 import { ChatService } from "./modules/chat/services/chat.service";
 import { Message } from "./modules/chat/models/message.model";
@@ -13,13 +14,13 @@ import jwt from "jsonwebtoken";
 const PORT = process.env.PORT || 3000;
 
 console.log("-----------------------------------------");
-console.log("   NOMADLY BACKEND STARTING (v1.0.1)     ");
+console.log("   NOMADLY BACKEND STARTING (v2.0.0)     ");
 console.log("-----------------------------------------");
 
 const app = createApp();
 const httpServer = createServer(app);
 
-const io = new Server(httpServer, {
+export const io = new Server(httpServer, {
   cors: {
     origin: process.env.ALLOWED_ORIGINS?.split(",") || "*",
     credentials: true,
@@ -28,6 +29,7 @@ const io = new Server(httpServer, {
 
 const chatService = new ChatService();
 
+// Socket.IO authentication middleware
 io.use((socket, next) => {
   const token = socket.handshake.auth.token;
   if (!token) {
@@ -48,6 +50,7 @@ io.use((socket, next) => {
   }
 });
 
+// Socket.IO connection handler
 io.on("connection", (socket) => {
   logger.info({ userId: socket.data.user?.userId }, "User connected to Socket.IO");
 
@@ -117,16 +120,38 @@ io.on("connection", (socket) => {
 
 const startServer = async () => {
   try {
+    // Connect to MongoDB
     await connectDB();
+    logger.info("MongoDB connected successfully");
+
+    // Connect to Redis
+    try {
+      await connectRedis();
+      // Test Redis connection
+      const redis = getRedisClient();
+      await redis.ping();
+      logger.info("Redis connected successfully");
+    } catch (redisError) {
+      logger.warn({ error: redisError }, "Redis connection failed - OTP and caching will not work");
+      // Continue without Redis in development mode
+      if (process.env.NODE_ENV === "production") {
+        throw redisError;
+      }
+    }
 
     httpServer.listen(PORT, () => {
       logger.info(`Server running on port ${PORT}`);
+      logger.info(`API Documentation: http://localhost:${PORT}/api-docs`);
+      logger.info(`Health Check: http://localhost:${PORT}/health`);
     });
 
+    // Graceful shutdown
     const gracefulShutdown = async () => {
       logger.info("Shutting down gracefully...");
       httpServer.close(async () => {
         await closeDatabase();
+        await closeRedisConnection();
+        logger.info("All connections closed");
         process.exit(0);
       });
     };

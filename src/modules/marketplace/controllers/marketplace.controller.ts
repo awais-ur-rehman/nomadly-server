@@ -27,6 +27,19 @@ export class MarketplaceController {
     ApiResponse.paginated(res, builders, page, limit, total);
   });
 
+  getBuilderReviews = asyncHandler(async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 20;
+
+    const { reviews, total } = await this.marketplaceService.getBuilderReviews(
+      id,
+      { page, limit }
+    );
+
+    ApiResponse.paginated(res, reviews, page, limit, total);
+  });
+
   requestConsultation = asyncHandler(async (req: Request, res: Response) => {
     if (!req.user) {
       throw new Error("User not authenticated");
@@ -67,5 +80,16 @@ export class MarketplaceController {
       comment
     );
     ApiResponse.success(res, review, "Review created successfully", 201);
+  });
+
+  getMyConsultations = asyncHandler(async (req: Request, res: Response) => {
+    if (!req.user) {
+      throw new Error("User not authenticated");
+    }
+
+    const consultations = await this.marketplaceService.getMyConsultations(
+      req.user.userId
+    );
+    ApiResponse.success(res, consultations);
   });
 }

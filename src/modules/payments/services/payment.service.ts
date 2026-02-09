@@ -30,11 +30,17 @@ export class PaymentService {
     }
 
     const isVantagePro = productId.includes("vantage_pro");
+    const isAnnual = productId.toLowerCase().includes("annual") || productId.toLowerCase().includes("yearly");
+
+    // Default to 1 month (31 days) unless it's annual
+    const durationMs = isAnnual
+      ? 365 * 24 * 60 * 60 * 1000
+      : 31 * 24 * 60 * 60 * 1000;
 
     user.subscription = {
       status: "active",
       plan: isVantagePro ? "vantage_pro" : "free",
-      expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      expires_at: new Date(Date.now() + durationMs),
       revenue_cat_id: productId,
     };
 

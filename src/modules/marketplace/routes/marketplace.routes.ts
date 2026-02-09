@@ -25,6 +25,7 @@ export const createMarketplaceRoutes = (
   marketplaceController: MarketplaceController
 ) => {
   router.get("/builders", authenticate, marketplaceController.searchBuilders);
+  router.get("/builders/:id/reviews", authenticate, marketplaceController.getBuilderReviews);
   router.post(
     "/consult",
     authenticate,
@@ -41,6 +42,11 @@ export const createMarketplaceRoutes = (
     authenticate,
     validate(createReviewSchema),
     marketplaceController.createReview
+  );
+  router.get(
+    "/consultations/mine",
+    authenticate,
+    marketplaceController.getMyConsultations
   );
 
   return router;

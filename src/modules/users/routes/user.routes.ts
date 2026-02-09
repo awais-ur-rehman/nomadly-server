@@ -21,8 +21,8 @@ const updateProfileSchema = z.object({
       .optional(),
     rig: z
       .object({
-        type: z.enum(["sprinter", "skoolie", "suv", "truck_camper"]).optional(),
-        crew_type: z.enum(["solo", "couple", "with_pets"]).optional(),
+        type: z.enum(["van", "bus", "truck", "car", "rv", "sprinter", "skoolie", "suv", "truck_camper", "other"]).optional(),
+        crew_type: z.enum(["solo", "couple", "family", "friends", "with_pets"]).optional(),
         pet_friendly: z.boolean().optional(),
       })
       .optional(),
@@ -50,8 +50,8 @@ const completeProfileSchema = z.object({
       .optional(),
     rig: z
       .object({
-        type: z.enum(["sprinter", "skoolie", "suv", "truck_camper"]).optional(),
-        crew_type: z.enum(["solo", "couple", "with_pets"]).optional(),
+        type: z.enum(["van", "bus", "truck", "car", "rv", "sprinter", "skoolie", "suv", "truck_camper", "other"]).optional(),
+        crew_type: z.enum(["solo", "couple", "family", "friends", "with_pets"]).optional(),
         pet_friendly: z.boolean().optional(),
       })
       .optional(),
@@ -93,8 +93,19 @@ export const createUserRoutes = (userController: UserController) => {
     validate(updateRouteSchema),
     userController.updateRoute
   );
+  router.delete("/route", authenticate, userController.deleteRoute);
   router.get("/search", authenticate, userController.searchUsers);
+  router.get("/travelers", authenticate, userController.getTravelers);
   router.patch("/toggle-builder", authenticate, userController.toggleBuilderStatus);
+
+  // User profile
+  router.get("/:userId", authenticate, userController.getUserById);
+
+  // Follow routes
+  router.post("/:userId/follow", authenticate, userController.followUser);
+  router.delete("/:userId/follow", authenticate, userController.unfollowUser);
+  router.get("/:userId/followers", userController.getFollowers);
+  router.get("/:userId/following", userController.getFollowing);
 
   return router;
 };
