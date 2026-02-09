@@ -27,6 +27,7 @@ import { createStoryRoutes } from "./modules/stories/routes/story.routes";
 import { createSafetyRoutes } from "./modules/safety/routes/safety.routes";
 import { createInviteRoutes } from "./modules/invite/routes/invite.routes";
 import { createVerificationRoutes } from "./modules/verification/routes/verification.routes";
+import { createTripRoutes } from "./modules/trips/routes/trip.routes";
 
 // Services
 import { AuthService } from "./modules/auth/services/auth.service";
@@ -45,6 +46,7 @@ import { StoryService } from "./modules/stories/services/story.service";
 import { SafetyService } from "./modules/safety/services/safety.service";
 import { InviteService } from "./modules/invite/services/invite.service";
 import { VerificationService } from "./modules/verification/services/verification.service";
+import { TripService } from "./modules/trips/services/trip.service";
 
 // Controllers
 import { AuthController } from "./modules/auth/controllers/auth.controller";
@@ -63,6 +65,7 @@ import { StoryController } from "./modules/stories/controllers/story.controller"
 import { SafetyController } from "./modules/safety/controllers/safety.controller";
 import { InviteController } from "./modules/invite/controllers/invite.controller";
 import { VerificationController } from "./modules/verification/controllers/verification.controller";
+import { TripController } from "./modules/trips/controllers/trip.controller";
 
 export const createApp = () => {
   const app = express();
@@ -133,6 +136,7 @@ export const createApp = () => {
   const safetyService = new SafetyService();
   const inviteService = new InviteService();
   const verificationService = new VerificationService();
+  const tripService = new TripService();
 
   // Initialize controllers
   const authController = new AuthController(authService);
@@ -151,6 +155,7 @@ export const createApp = () => {
   const safetyController = new SafetyController(safetyService);
   const inviteController = new InviteController(inviteService);
   const verificationController = new VerificationController(verificationService);
+  const tripController = new TripController(tripService);
 
   // API v1 Routes (new versioned API)
   app.use("/api/v1/auth", createAuthRoutes(authController));
@@ -158,6 +163,7 @@ export const createApp = () => {
   app.use("/api/v1/discovery", createMatchingRoutes(matchingController));
   app.use("/api/v1/matching", createMatchingRoutes(matchingController));
   app.use("/api/v1/beacons", createActivityRoutes(activityController));
+  app.use("/api/v1/activities", createActivityRoutes(activityController));
   app.use("/api/v1/marketplace", createMarketplaceRoutes(marketplaceController));
   app.use("/api/v1/jobs", createJobRoutes(jobController));
   app.use("/api/v1/chat", createChatRoutes(chatController));
@@ -170,6 +176,7 @@ export const createApp = () => {
   app.use("/api/v1/safety", createSafetyRoutes(safetyController));
   app.use("/api/v1/invite", createInviteRoutes(inviteController));
   app.use("/api/v1/verification", createVerificationRoutes(verificationController));
+  app.use("/api/v1/trips", createTripRoutes(tripController));
 
   // Legacy API Routes (backward compatibility)
   app.use("/api/auth", createAuthRoutes(authController));
@@ -189,6 +196,7 @@ export const createApp = () => {
   app.use("/api/safety", createSafetyRoutes(safetyController));
   app.use("/api/invite", createInviteRoutes(inviteController));
   app.use("/api/verification", createVerificationRoutes(verificationController));
+  app.use("/api/trips", createTripRoutes(tripController));
 
   // 404 handler
   app.use((_req: Request, res: Response) => {

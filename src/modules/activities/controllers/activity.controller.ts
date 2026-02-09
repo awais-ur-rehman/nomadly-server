@@ -104,4 +104,63 @@ export class ActivityController {
     );
     ApiResponse.success(res, activity, "Participant rejected");
   });
+
+  getMyHosted = asyncHandler(async (req: Request, res: Response) => {
+    if (!req.user) {
+      throw new Error("User not authenticated");
+    }
+
+    const activities = await this.activityService.getMyHostedActivities(
+      req.user.userId
+    );
+    ApiResponse.success(res, activities);
+  });
+
+  getMyJoined = asyncHandler(async (req: Request, res: Response) => {
+    if (!req.user) {
+      throw new Error("User not authenticated");
+    }
+
+    const activities = await this.activityService.getMyJoinedActivities(
+      req.user.userId
+    );
+    ApiResponse.success(res, activities);
+  });
+
+  updateActivity = asyncHandler(async (req: Request, res: Response) => {
+    if (!req.user) {
+      throw new Error("User not authenticated");
+    }
+
+    const { id } = req.params;
+    const activity = await this.activityService.updateActivity(
+      id,
+      req.user.userId,
+      req.body
+    );
+    ApiResponse.success(res, activity, "Activity updated successfully");
+  });
+
+  deleteActivity = asyncHandler(async (req: Request, res: Response) => {
+    if (!req.user) {
+      throw new Error("User not authenticated");
+    }
+
+    const { id } = req.params;
+    await this.activityService.deleteActivity(id, req.user.userId);
+    ApiResponse.success(res, null, "Activity deleted successfully");
+  });
+
+  leaveActivity = asyncHandler(async (req: Request, res: Response) => {
+    if (!req.user) {
+      throw new Error("User not authenticated");
+    }
+
+    const { id } = req.params;
+    const activity = await this.activityService.leaveActivity(
+      id,
+      req.user.userId
+    );
+    ApiResponse.success(res, activity, "Left activity successfully");
+  });
 }

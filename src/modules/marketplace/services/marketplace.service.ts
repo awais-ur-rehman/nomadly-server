@@ -120,6 +120,20 @@ export class MarketplaceService {
     return { reviews, total };
   }
 
+  async getMyConsultations(userId: string): Promise<any[]> {
+    const consultations = await Consultation.find({
+      $or: [
+        { requester_id: userId },
+        { builder_id: userId },
+      ],
+    })
+      .populate("requester_id", "username profile.name profile.photo_url")
+      .populate("builder_id", "username profile.name profile.photo_url builder_profile")
+      .sort({ created_at: -1 });
+
+    return consultations;
+  }
+
   async createReview(
     consultationId: string,
     reviewerId: string,

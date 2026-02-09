@@ -81,4 +81,15 @@ export class MarketplaceController {
     );
     ApiResponse.success(res, review, "Review created successfully", 201);
   });
+
+  getMyConsultations = asyncHandler(async (req: Request, res: Response) => {
+    if (!req.user) {
+      throw new Error("User not authenticated");
+    }
+
+    const consultations = await this.marketplaceService.getMyConsultations(
+      req.user.userId
+    );
+    ApiResponse.success(res, consultations);
+  });
 }

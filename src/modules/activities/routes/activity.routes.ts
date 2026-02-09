@@ -49,12 +49,17 @@ export const createActivityRoutes = (activityController: ActivityController) => 
     activityController.createActivity
   );
   router.get("/nearby", authenticate, activityController.getNearby);
+  router.get("/mine", authenticate, activityController.getMyHosted);
+  router.get("/joined", authenticate, activityController.getMyJoined);
   router.get("/:id", authenticate, activityController.getActivity);
+  router.patch("/:id", authenticate, activityController.updateActivity);
+  router.delete("/:id", authenticate, activityController.deleteActivity);
   router.post(
     "/:id/join",
     authenticate,
     activityController.requestJoin
   );
+  router.delete("/:id/leave", authenticate, activityController.leaveActivity);
   router.patch(
     "/:id/approve/:userId",
     authenticate,

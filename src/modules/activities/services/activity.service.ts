@@ -152,4 +152,107 @@ export class ActivityService {
 
     return expired.modifiedCount;
   }
+
+  async getMyHostedActivities(userId: string): Promise<any[]> {
+    const activities = await Activity.find({
+      host_id: userId,
+    })
+      .populate("host_id", "profile nomad_id")
+      .populate("current_participants", "profile nomad_id")
+      .populate("pending_requests", "profile nomad_id")
+      .sort({ event_time: -1 });
+
+    return activities;
+  }
+
+  async getMyJoinedActivities(userId: string): Promise<any[]> {
+    const activities = await Activity.find({
+      current_participants: userId,
+      host_id: { $ne: userId },
+    })
+      .populate("host_id", "profile nomad_id")
+      .populate("current_participants", "profile nomad_id")
+      .sort({ event_time: -1 });
+
+    return activities;
+  }
+
+  async updateActivity(
+    activityId: string,
+    hostId: string,
+    updateData: any
+  ): Promise<any> {
+    const activity = await Activity.findById(activityId);
+    if (!activity) {
+      throw new NotFoundError("Activity not found");
+    }
+
+    if (activity.host_id.toString() !== hostId) {
+      throw new ValidationError("Only the host can update this activity");
+    }
+
+    // Only allow updating certain fields
+    const allowedFields = [
+      "title",
+      "description",
+      "event_time",
+      "max_participants",
+      "verified_only",
+    ];
+    const filteredData: any = {};
+    for (const field of allowedFields) {
+      if (updateData[field] !== undefined) {
+        filteredData[field] = updateData[field];
+      }
+    }
+
+    Object.assign(activity, filteredData);
+    await activity.save();
+
+    return Activity.findById(activityId)
+      .populate("host_id", "profile nomad_id")
+      .populate("current_participants", "profile nomad_id")
+      .populate("pending_requests", "profile nomad_id");
+  }
+
+  async deleteActivity(activityId: string, hostId: string): Promise<void> {
+    const activity = await Activity.findById(activityId);
+    if (!activity) {
+      throw new NotFoundError("Activity not found");
+    }
+
+    if (activity.host_id.toString() !== hostId) {
+      throw new ValidationError("Only the host can delete this activity");
+    }
+
+    await Activity.findByIdAndDelete(activityId);
+  }
+
+  async leaveActivity(activityId: string, userId: string): Promise<any> {
+    const activity = await Activity.findById(activityId);
+    if (!activity) {
+      throw new NotFoundError("Activity not found");
+    }
+
+    if (activity.host_id.toString() === userId) {
+      throw new ValidationError("Host cannot leave their own activity");
+    }
+
+    if (!activity.current_participants.includes(userId as any)) {
+      throw new ValidationError("You are not a participant of this activity");
+    }
+
+    activity.current_participants = activity.current_participants.filter(
+      (id) => id.toString() !== userId
+    );
+
+    // If activity was full, reopen it
+    if (activity.status === "full") {
+      activity.status = "open";
+    }
+
+    await activity.save();
+
+    return activity;
+  }
 }

@@ -93,6 +93,7 @@ export const createUserRoutes = (userController: UserController) => {
     validate(updateRouteSchema),
     userController.updateRoute
   );
+  router.delete("/route", authenticate, userController.deleteRoute);
   router.get("/search", authenticate, userController.searchUsers);
   router.get("/travelers", authenticate, userController.getTravelers);
   router.patch("/toggle-builder", authenticate, userController.toggleBuilderStatus);

@@ -153,4 +153,12 @@ export class UserController {
     );
     ApiResponse.paginated(res, result.users, page, limit, result.total);
   });
+
+  deleteRoute = asyncHandler(async (req: Request, res: Response) => {
+    if (!req.user) {
+      throw new Error("User not authenticated");
+    }
+    const user = await this.userService.deleteRoute(req.user.userId);
+    ApiResponse.success(res, user, "Travel route deleted successfully");
+  });
 }

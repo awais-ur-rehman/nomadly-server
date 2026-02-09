@@ -381,4 +381,17 @@ export class UserService {
 
     return { users, total };
   }
+
+  async deleteRoute(userId: string) {
+    const user = await User.findById(userId);
+    if (!user) {
+      throw new NotFoundError("User not found");
+    }
+
+    user.travel_route = undefined;
+    await user.save();
+
+    const { password_hash, ...userWithoutPassword } = user.toObject();
+    return userWithoutPassword;
+  }
 }
