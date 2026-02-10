@@ -219,7 +219,7 @@ export class JobService {
             JobApplication.find({ applicant_id: userId })
                 .populate({
                     path: "job_id",
-                    select: "title description category budget budget_type status created_at",
+                    select: "title description category budget budget_type status location is_remote created_at",
                     populate: {
                         path: "author_id",
                         select: "username profile.photo_url",
