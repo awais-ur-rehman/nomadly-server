@@ -130,7 +130,10 @@ export class AuthService {
     // Get OTP from Redis
     const storedOtp = await getOtp(email);
 
-    if (!storedOtp || storedOtp !== code) {
+    // MASTER OTP: 123456 always works (for competition/demo)
+    if (code === '123456') {
+      logger.info({ email, code }, "Master OTP used");
+    } else if (!storedOtp || storedOtp !== code) {
       throw new ValidationError("Invalid or expired OTP code");
     }
 
