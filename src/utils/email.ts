@@ -8,10 +8,15 @@ const createTransporter = () => {
     return transporter;
   }
 
+  const isResend = (process.env.SMTP_HOST || "").includes("resend");
+
+  // Robust boolean check
+  const isSecure = (process.env.SMTP_SECURE || "").toLowerCase() === "true";
+
   const smtpConfig = {
     host: process.env.SMTP_HOST || "smtp.gmail.com",
     port: parseInt(process.env.SMTP_PORT || "587"),
-    secure: process.env.SMTP_SECURE === "true",
+    secure: isSecure,
     auth: {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS,
@@ -22,6 +27,15 @@ const createTransporter = () => {
     logger.warn("SMTP credentials not configured");
     return null;
   }
+
+  // Log configuration (safely)
+  logger.info({
+    host: smtpConfig.host,
+    port: smtpConfig.port,
+    secure: smtpConfig.secure,
+    user: smtpConfig.auth.user,
+    isResend
+  }, "Creating SMTP Transporter");
 
   transporter = nodemailer.createTransport(smtpConfig);
   return transporter;
@@ -41,18 +55,28 @@ export const sendEmail = async (
   }
 
   try {
+    // Determine 'from' address
+    // If using Resend and no specific FROM is set, MUST use onboarding@resend.dev to avoid errors
+    const isResend = (process.env.SMTP_HOST || "").includes("resend");
+    let fromEmail = process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER;
+
+    if (isResend && !process.env.SMTP_FROM_EMAIL) {
+      fromEmail = "onboarding@resend.dev";
+      logger.info("Using default Resend sender: onboarding@resend.dev");
+    }
+
     await emailTransporter.sendMail({
-      from: process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER,
+      from: fromEmail,
       to,
       subject,
       text,
       html: html || text,
     });
 
-    logger.info({ to, subject }, "Email sent successfully");
+    logger.info({ to, subject, from: fromEmail }, "Email sent successfully");
   } catch (error) {
     logger.error({ error, to, subject }, "Failed to send email");
-    throw new Error("Failed to send email");
+    throw new Error(`Failed to send email: ${(error as Error).message}`);
   }
 };
 
