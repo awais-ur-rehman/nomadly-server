@@ -96,26 +96,37 @@ const sendResendApi = async (to: string, subject: string, html: string) => {
   const apiKey = process.env.SMTP_PASS; // The password IS the API key
   if (!apiKey) throw new Error("Missing API Key for Resend");
 
-  const response = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from: "onboarding@resend.dev", // Must use this for testing/unverified domains
-      to: [to],
-      subject: subject,
-      html: html,
-    }),
-  });
+  logger.info({ to, subject, apiKeyPrefix: apiKey.substring(0, 8) + "..." }, "Attempting Resend API call");
+
+  let response: Response;
+  try {
+    response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: process.env.SMTP_FROM_EMAIL || "onboarding@resend.dev",
+        to: [to],
+        subject: subject,
+        html: html,
+      }),
+    });
+  } catch (fetchError: any) {
+    // Network-level error (DNS, timeout, etc.)
+    logger.error({ message: fetchError?.message, code: fetchError?.code, to }, "Resend API network error");
+    throw new Error(`Resend API network error: ${fetchError?.message || "Unknown"}`);
+  }
 
   if (!response.ok) {
     const errorText = await response.text();
+    logger.error({ status: response.status, body: errorText, to }, "Resend API returned error response");
     throw new Error(`Resend API Error: ${response.status} ${errorText}`);
   }
 
-  logger.info({ to, subject, method: "HTTP-API" }, "Email sent successfully via Resend API");
+  const responseData = await response.json() as any;
+  logger.info({ to, subject, method: "HTTP-API", id: responseData?.id }, "Email sent successfully via Resend API");
 };
 
 export const sendOtpEmail = async (email: string, code: string): Promise<void> => {
@@ -133,5 +144,9 @@ export const sendOtpEmail = async (email: string, code: string): Promise<void> =
     </div>
   `;
 
-  await sendEmail(email, subject, text, html);
+  try {
+    await sendEmail(email, subject, text, html);
+  } catch (error) {
+    logger.error({ error, email }, "Failed to send OTP email");
+  }
 };
