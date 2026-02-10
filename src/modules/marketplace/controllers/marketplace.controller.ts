@@ -4,16 +4,20 @@ import { ApiResponse } from "../../../utils/response";
 import { asyncHandler } from "../../../middleware/error-handler";
 
 export class MarketplaceController {
-  constructor(private marketplaceService: MarketplaceService) {}
+  constructor(private marketplaceService: MarketplaceService) { }
 
   searchBuilders = asyncHandler(async (req: Request, res: Response) => {
     const filters = {
-      specialty: req.query.specialty
-        ? (req.query.specialty as string).split(",")
-        : undefined,
+      // Client sends comma-separated 'specialties' (plural) but backend logic might expect singular or array
+      specialty: req.query.specialties
+        ? (req.query.specialties as string).split(",")
+        : req.query.specialty // Fallback for singular
+          ? (req.query.specialty as string).split(",")
+          : undefined,
       maxRate: req.query.max_rate
         ? parseFloat(req.query.max_rate as string)
         : undefined,
+      search: (req.query.search || req.query.q) as string | undefined,
     };
 
     const page = parseInt(req.query.page as string) || 1;

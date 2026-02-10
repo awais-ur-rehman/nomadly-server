@@ -23,12 +23,24 @@ export class MarketplaceService {
       ],
     };
 
-    if (filters.specialty) {
+    if (filters.specialty && filters.specialty.length > 0) {
       query["builder_profile.specialty_tags"] = { $in: filters.specialty };
     }
 
     if (filters.maxRate) {
       query["builder_profile.hourly_rate"] = { $lte: filters.maxRate };
+    }
+
+    if (filters.search) {
+      const searchRegex = new RegExp(filters.search, 'i');
+      query.$or = [
+        { username: searchRegex },
+        { "profile.name": searchRegex },
+        { "builder_profile.business_name": searchRegex },
+        { "builder_profile.bio": searchRegex },
+        // Also search in tags if they type a specialty
+        { "builder_profile.specialty_tags": { $in: [searchRegex] } }
+      ];
     }
 
     const skip = (pagination.page - 1) * pagination.limit;

@@ -75,6 +75,11 @@ export class PaymentService {
       revenue_cat_id: productId,
     };
 
+    // Grant unlimited invites for Pro users
+    if (isVantagePro) {
+      user.invite_count = 9999;
+    }
+
     await user.save();
     logger.info({ userId, productId }, "Subscription activated");
   }

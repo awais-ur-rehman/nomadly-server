@@ -33,6 +33,7 @@ const updateProfileSchema = z.object({
         hourly_rate: z.number().optional(),
         availability_status: z.enum(["available", "busy"]).optional(),
         bio: z.string().optional(),
+        portfolio_images: z.array(z.string()).optional(),
       })
       .optional(),
   }),

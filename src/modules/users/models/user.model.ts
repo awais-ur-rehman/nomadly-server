@@ -243,7 +243,7 @@ const userSchema = new Schema<IUser>(
       default: "user",
     },
     invited_by: { type: Schema.Types.ObjectId as any, ref: "User" },
-    invite_count: { type: Number, default: 0 },
+    invite_count: { type: Number, default: 3 },
     is_active: { type: Boolean, default: false },
   },
   {
