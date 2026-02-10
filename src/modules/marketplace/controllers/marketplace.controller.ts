@@ -28,7 +28,29 @@ export class MarketplaceController {
       { page, limit }
     );
 
-    ApiResponse.paginated(res, builders, page, limit, total);
+    // Transform raw User docs into BuilderProfile shape the client expects
+    const transformedBuilders = builders.map((builder: any) => {
+      const doc = builder.toObject ? builder.toObject() : builder;
+      return {
+        id: doc._id?.toString() || doc.id,
+        user: {
+          id: doc._id?.toString() || doc.id,
+          username: doc.username || '',
+          name: doc.profile?.name || '',
+          photoUrl: doc.profile?.photo_url || '',
+        },
+        businessName: doc.builder_profile?.business_name || '',
+        description: doc.builder_profile?.bio || '',
+        specialty: doc.builder_profile?.specialty_tags || [],
+        rating: doc.builder_profile?.hourly_rate || 0.0,
+        reviewCount: 0,
+        portfolioImageUrls: doc.builder_profile?.portfolio_images || [],
+        isVerified: doc.nomad_id?.verified || false,
+        locationBase: doc.profile?.bio || null,
+      };
+    });
+
+    ApiResponse.paginated(res, transformedBuilders, page, limit, total);
   });
 
   getBuilderReviews = asyncHandler(async (req: Request, res: Response) => {

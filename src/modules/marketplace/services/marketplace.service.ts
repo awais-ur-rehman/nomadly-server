@@ -15,13 +15,19 @@ export class MarketplaceService {
     const query: any = {
       is_builder: true,
       is_active: true,
-      // Include builders who are available OR haven't set their status yet (defaults to available)
-      $or: [
-        { "builder_profile.availability_status": "available" },
-        { "builder_profile.availability_status": { $exists: false } },
-        { "builder_profile.availability_status": null },
-      ],
     };
+
+    // Use $and to combine multiple $or conditions without overwriting
+    const andConditions: any[] = [
+      // Include builders who are available OR haven't set their status yet (defaults to available)
+      {
+        $or: [
+          { "builder_profile.availability_status": "available" },
+          { "builder_profile.availability_status": { $exists: false } },
+          { "builder_profile.availability_status": null },
+        ],
+      },
+    ];
 
     if (filters.specialty && filters.specialty.length > 0) {
       query["builder_profile.specialty_tags"] = { $in: filters.specialty };
@@ -33,15 +39,18 @@ export class MarketplaceService {
 
     if (filters.search) {
       const searchRegex = new RegExp(filters.search, 'i');
-      query.$or = [
-        { username: searchRegex },
-        { "profile.name": searchRegex },
-        { "builder_profile.business_name": searchRegex },
-        { "builder_profile.bio": searchRegex },
-        // Also search in tags if they type a specialty
-        { "builder_profile.specialty_tags": { $in: [searchRegex] } }
-      ];
+      andConditions.push({
+        $or: [
+          { username: searchRegex },
+          { "profile.name": searchRegex },
+          { "builder_profile.business_name": searchRegex },
+          { "builder_profile.bio": searchRegex },
+          { "builder_profile.specialty_tags": { $in: [searchRegex] } },
+        ],
+      });
     }
+
+    query.$and = andConditions;
 
     const skip = (pagination.page - 1) * pagination.limit;
 

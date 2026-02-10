@@ -1,5 +1,7 @@
 import { User } from "../../users/models/user.model";
 import { Consultation } from "../../marketplace/models/consultation.model";
+import { JobPayment } from "../../marketplace/models/job-payment.model";
+import { Job } from "../../marketplace/models/job.model";
 import { logger } from "../../../utils/logger";
 
 export class PaymentService {
@@ -40,6 +42,17 @@ export class PaymentService {
           }
           logger.info(`Processing deactivation for User ${app_user_id}`);
           await this.deactivateSubscription(app_user_id);
+          break;
+        case "NON_RENEWING_PURCHASE":
+          // One-time purchase (e.g., job service fee)
+          if (!app_user_id || !product_id) {
+            logger.warn("Missing app_user_id or product_id for one-time purchase");
+            return;
+          }
+          if (product_id.includes("job")) {
+            logger.info(`Processing job payment for User ${app_user_id}`);
+            await this.handleJobPayment(app_user_id, product_id, eventData);
+          }
           break;
         case "TEST":
           // logger.info("Test event received");
@@ -116,5 +129,32 @@ export class PaymentService {
     }
 
     return user.subscription;
+  }
+
+  private async handleJobPayment(userId: string, productId: string, eventData: any) {
+    try {
+      // Find the most recent pending payment for this user
+      const payment = await JobPayment.findOne({
+        payer_id: userId,
+        status: "pending",
+      }).sort({ created_at: -1 });
+
+      if (!payment) {
+        logger.warn({ userId }, "No pending job payment found for user");
+        return;
+      }
+
+      // Mark payment as paid
+      payment.status = "paid";
+      payment.revenue_cat_transaction_id = eventData.transaction_id || eventData.original_transaction_id || productId;
+      await payment.save();
+
+      // Mark the job as closed
+      await Job.findByIdAndUpdate(payment.job_id, { status: "closed" });
+
+      logger.info({ userId, jobId: payment.job_id, paymentId: payment._id }, "Job payment processed via webhook");
+    } catch (error) {
+      logger.error({ error, userId }, "Error processing job payment webhook");
+    }
   }
 }

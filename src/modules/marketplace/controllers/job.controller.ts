@@ -118,4 +118,33 @@ export class JobController {
 
         ApiResponse.paginated(res, jobs, page, limit, total);
     });
+
+    completeJob = asyncHandler(async (req: Request, res: Response) => {
+        if (!req.user) throw new Error("User not authenticated");
+        const { id } = req.params;
+
+        const job = await this.jobService.completeJob(id, req.user.userId);
+        ApiResponse.success(res, job, "Job marked as completed");
+    });
+
+    recordJobPayment = asyncHandler(async (req: Request, res: Response) => {
+        if (!req.user) throw new Error("User not authenticated");
+        const { id } = req.params;
+        const { transaction_id, amount } = req.body;
+
+        const payment = await this.jobService.recordJobPayment(
+            id,
+            req.user.userId,
+            transaction_id,
+            amount
+        );
+        ApiResponse.success(res, payment, "Payment recorded successfully");
+    });
+
+    getJobPayment = asyncHandler(async (req: Request, res: Response) => {
+        const { id } = req.params;
+
+        const payment = await this.jobService.getJobPayment(id);
+        ApiResponse.success(res, payment);
+    });
 }

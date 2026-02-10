@@ -12,7 +12,7 @@ export interface IJob extends Document {
         coordinates: [number, number]; // [lng, lat]
     };
     is_remote: boolean;
-    status: "open" | "in_progress" | "closed";
+    status: "open" | "in_progress" | "completed" | "closed";
     created_at: Date;
     updated_at: Date;
 }
@@ -43,7 +43,7 @@ const jobSchema = new Schema<IJob>(
         is_remote: { type: Boolean, default: false },
         status: {
             type: String,
-            enum: ["open", "in_progress", "closed"],
+            enum: ["open", "in_progress", "completed", "closed"],
             default: "open",
         },
     },

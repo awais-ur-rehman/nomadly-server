@@ -1,6 +1,7 @@
 import { Job, type IJob } from "../models/job.model";
 import { User } from "../../users/models/user.model";
 import { JobApplication, type IJobApplication } from "../models/job-application.model";
+import { JobPayment, type IJobPayment } from "../models/job-payment.model";
 import { ForbiddenError, NotFoundError } from "../../../utils/errors";
 import { NotificationService } from "../../notifications/services/notification.service";
 
@@ -259,5 +260,106 @@ export class JobService {
         );
 
         return { jobs: jobsWithCounts, total };
+    }
+
+    async completeJob(jobId: string, userId: string): Promise<IJob> {
+        const job = await Job.findById(jobId);
+        if (!job) throw new NotFoundError("Job not found");
+        if (job.author_id.toString() !== userId) {
+            throw new ForbiddenError("Only the job owner can complete a job");
+        }
+        if (job.status !== "in_progress") {
+            throw new Error("Job must be in_progress to complete");
+        }
+
+        job.status = "completed";
+        await job.save();
+
+        // Find the hired applicant to create a payment record
+        const hiredApplication = await JobApplication.findOne({
+            job_id: jobId,
+            status: "hired",
+        });
+
+        if (hiredApplication) {
+            // Create a pending payment record if one doesn't exist
+            const existingPayment = await JobPayment.findOne({ job_id: jobId });
+            if (!existingPayment) {
+                await JobPayment.create({
+                    job_id: jobId,
+                    payer_id: userId,
+                    payee_id: hiredApplication.applicant_id,
+                    amount: job.budget,
+                    status: "pending",
+                });
+            }
+        }
+
+        return job;
+    }
+
+    async recordJobPayment(
+        jobId: string,
+        userId: string,
+        transactionId: string,
+        amount: number
+    ): Promise<IJobPayment> {
+        const job = await Job.findById(jobId);
+        if (!job) throw new NotFoundError("Job not found");
+        if (job.author_id.toString() !== userId) {
+            throw new ForbiddenError("Only the job owner can record payment");
+        }
+
+        let payment = await JobPayment.findOne({ job_id: jobId });
+
+        if (payment) {
+            // Update existing payment
+            payment.revenue_cat_transaction_id = transactionId;
+            payment.status = "paid";
+            payment.amount = amount;
+            await payment.save();
+        } else {
+            // Find hired applicant
+            const hiredApplication = await JobApplication.findOne({
+                job_id: jobId,
+                status: "hired",
+            });
+
+            if (!hiredApplication) {
+                throw new Error("No hired applicant found for this job");
+            }
+
+            payment = await JobPayment.create({
+                job_id: jobId,
+                payer_id: userId,
+                payee_id: hiredApplication.applicant_id,
+                amount,
+                revenue_cat_transaction_id: transactionId,
+                status: "paid",
+            });
+        }
+
+        // Also mark job as closed after payment
+        await Job.findByIdAndUpdate(jobId, { status: "closed" });
+
+        // Notify the hired worker that payment has been received
+        const hiredApp = await JobApplication.findOne({ job_id: jobId, status: "hired" });
+        if (hiredApp) {
+            await this.notificationService.sendPushNotification(
+                hiredApp.applicant_id.toString(),
+                "Payment Received",
+                `Payment of $${amount} has been received for "${job.title}"`,
+                "application_status",
+                { type: "job_payment", jobId: jobId }
+            );
+        }
+
+        return payment;
+    }
+
+    async getJobPayment(jobId: string): Promise<IJobPayment | null> {
+        return JobPayment.findOne({ job_id: jobId })
+            .populate("payer_id", "username profile.name profile.photo_url")
+            .populate("payee_id", "username profile.name profile.photo_url");
     }
 }

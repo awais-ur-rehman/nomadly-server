@@ -72,5 +72,10 @@ export const createJobRoutes = (jobController: JobController) => {
         jobController.updateApplicationStatus
     );
 
+    // Job payment routes
+    router.post("/:id/complete", authenticate, jobController.completeJob);
+    router.post("/:id/pay", authenticate, jobController.recordJobPayment);
+    router.get("/:id/payment", authenticate, jobController.getJobPayment);
+
     return router;
 };
