@@ -127,6 +127,15 @@ export class UserService {
     if (profileData.builder_profile) {
       user.builder_profile = { ...user.builder_profile, ...profileData.builder_profile };
     }
+    if (profileData.travel_route) {
+      const { origin, destination, start_date, duration_days } = profileData.travel_route;
+      user.travel_route = {
+        origin: { type: 'Point', coordinates: [origin.lng, origin.lat] },
+        destination: { type: 'Point', coordinates: [destination.lng, destination.lat] },
+        start_date: new Date(start_date),
+        duration_days: duration_days,
+      };
+    }
 
     await user.save();
     const { password_hash, ...userWithoutPassword } = user.toObject();

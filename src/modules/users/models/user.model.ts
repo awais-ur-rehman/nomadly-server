@@ -87,6 +87,10 @@ export interface IUser extends Document {
   invited_by?: string;
   invite_count: number;
   is_active: boolean;
+  ai_usage: {
+    count: number;
+    last_reset: Date;
+  };
   created_at: Date;
   updated_at: Date;
 }
@@ -245,6 +249,10 @@ const userSchema = new Schema<IUser>(
     invited_by: { type: Schema.Types.ObjectId as any, ref: "User" },
     invite_count: { type: Number, default: 3 },
     is_active: { type: Boolean, default: false },
+    ai_usage: {
+      count: { type: Number, default: 0 },
+      last_reset: { type: Date, default: Date.now },
+    },
   },
   {
     timestamps: { createdAt: "created_at", updatedAt: "updated_at" },

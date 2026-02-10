@@ -28,6 +28,7 @@ import { createSafetyRoutes } from "./modules/safety/routes/safety.routes";
 import { createInviteRoutes } from "./modules/invite/routes/invite.routes";
 import { createVerificationRoutes } from "./modules/verification/routes/verification.routes";
 import { createTripRoutes } from "./modules/trips/routes/trip.routes";
+import { createAiRoutes } from "./modules/ai/routes/ai.routes";
 
 // Services
 import { AuthService } from "./modules/auth/services/auth.service";
@@ -47,6 +48,7 @@ import { SafetyService } from "./modules/safety/services/safety.service";
 import { InviteService } from "./modules/invite/services/invite.service";
 import { VerificationService } from "./modules/verification/services/verification.service";
 import { TripService } from "./modules/trips/services/trip.service";
+import { AiService } from "./modules/ai/services/ai.service";
 
 // Controllers
 import { AuthController } from "./modules/auth/controllers/auth.controller";
@@ -66,6 +68,7 @@ import { SafetyController } from "./modules/safety/controllers/safety.controller
 import { InviteController } from "./modules/invite/controllers/invite.controller";
 import { VerificationController } from "./modules/verification/controllers/verification.controller";
 import { TripController } from "./modules/trips/controllers/trip.controller";
+import { AiController } from "./modules/ai/controllers/ai.controller";
 
 export const createApp = () => {
   const app = express();
@@ -141,6 +144,7 @@ export const createApp = () => {
   const inviteService = new InviteService();
   const verificationService = new VerificationService();
   const tripService = new TripService();
+  const aiService = new AiService();
 
   // Initialize controllers
   const authController = new AuthController(authService);
@@ -160,6 +164,7 @@ export const createApp = () => {
   const inviteController = new InviteController(inviteService);
   const verificationController = new VerificationController(verificationService);
   const tripController = new TripController(tripService);
+  const aiController = new AiController(aiService);
 
   // API v1 Routes (new versioned API)
   app.use("/api/v1/auth", createAuthRoutes(authController));
@@ -181,6 +186,7 @@ export const createApp = () => {
   app.use("/api/v1/invite", createInviteRoutes(inviteController));
   app.use("/api/v1/verification", createVerificationRoutes(verificationController));
   app.use("/api/v1/trips", createTripRoutes(tripController));
+  app.use("/api/v1/ai", createAiRoutes(aiController));
 
   // Legacy API Routes (backward compatibility)
   app.use("/api/auth", createAuthRoutes(authController));

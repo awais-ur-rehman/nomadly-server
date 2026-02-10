@@ -87,9 +87,10 @@ export class PaymentService {
       revenue_cat_id: productId,
     };
 
-    // Grant unlimited invites for Pro users
+    // Grant unlimited invites for Pro users and reset AI usage
     if (isVantagePro) {
       user.invite_count = 9999;
+      user.ai_usage = { count: 0, last_reset: new Date() };
     }
 
     await user.save();
@@ -155,6 +156,58 @@ export class PaymentService {
       logger.info({ userId, jobId: payment.job_id, paymentId: payment._id }, "Job payment processed via webhook");
     } catch (error) {
       logger.error({ error, userId }, "Error processing job payment webhook");
+    }
+  }
+
+  async syncSubscription(userId: string) {
+    const user = await User.findById(userId);
+    if (!user) throw new Error("User not found");
+
+    const apiKey = process.env.REVENUECAT_API_KEY;
+    if (!apiKey) throw new Error("RevenueCat API Key not configured");
+
+    try {
+      const response = await fetch(`https://api.revenuecat.com/v1/subscribers/${userId}`, {
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`RevenueCat API Error: ${response.statusText}`);
+      }
+
+      const data = (await response.json()) as any;
+      const subscriber = data.subscriber;
+      const entitlements = subscriber.entitlements.active;
+
+      // Check for Pro entitlement (identifier depends on RC setup, commonly 'pro' or 'vantage_pro')
+      // We check if ANY entitlement is active that contains 'pro' or just if there are any active entitlements
+      // Adjust based on your specific entitlement identifier
+      const isPro = Object.keys(entitlements).some(key => key.toLowerCase().includes('pro') || key.toLowerCase().includes('vantage') || key.toLowerCase().includes('premium'));
+
+      // Also check entitlements via product_id if entitlement logic is ambiguous
+      // const activeSubscriptions = subscriber.subscriptions; // Map of product_id -> details
+
+      if (isPro) {
+        // Find the product ID causing this entitlement
+        const entitlementKey = Object.keys(entitlements).find(key => key.toLowerCase().includes('pro') || key.toLowerCase().includes('vantage')) || Object.keys(entitlements)[0];
+        const productId = entitlements[entitlementKey]?.product_identifier;
+
+        await this.activateSubscription(userId, productId || 'unknown_pro_product');
+      } else {
+        // If they were pro but now have no active pro entitlements
+        if (user.subscription?.plan === 'vantage_pro') {
+          await this.deactivateSubscription(userId);
+        }
+      }
+
+      return await this.getSubscriptionStatus(userId);
+    } catch (error) {
+      logger.error({ error, userId }, "Failed to sync subscription");
+      throw error;
     }
   }
 }

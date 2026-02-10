@@ -56,6 +56,30 @@ const completeProfileSchema = z.object({
         pet_friendly: z.boolean().optional(),
       })
       .optional(),
+    is_builder: z.boolean().optional(),
+    builder_profile: z
+      .object({
+        specialty_tags: z.array(z.string()).optional(),
+        hourly_rate: z.number().optional(),
+        availability_status: z.enum(["available", "busy"]).optional(),
+        bio: z.string().optional(),
+        portfolio_images: z.array(z.string()).optional(),
+      })
+      .optional(),
+    travel_route: z
+      .object({
+        origin: z.object({
+          lat: z.number(),
+          lng: z.number(),
+        }),
+        destination: z.object({
+          lat: z.number(),
+          lng: z.number(),
+        }),
+        start_date: z.string().datetime(),
+        duration_days: z.number().positive(),
+      })
+      .optional(),
   }),
 });
 
