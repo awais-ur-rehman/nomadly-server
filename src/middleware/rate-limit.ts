@@ -10,14 +10,14 @@ export const apiLimiter = rateLimit({
 
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 5,
+  max: 100, // Increased for debugging/testing
   message: "Too many authentication attempts, please try again later",
   skipSuccessfulRequests: true,
 });
 
 export const otpLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 3,
+  max: 5,
   message: "Too many OTP requests, please try again later",
 });
 
