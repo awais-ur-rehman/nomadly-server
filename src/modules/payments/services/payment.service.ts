@@ -5,7 +5,6 @@ import { logger } from "../../../utils/logger";
 export class PaymentService {
   async handleRevenueCatWebhook(event: any) {
     logger.info("--------------- REVENUECAT WEBHOOK RECEIVED ---------------");
-    logger.info({ event }, "Full Webhook Event Payload");
 
     // Fix: RevenueCat payload sends data inside an 'event' object
     // Structure: { event: { type: '...', ... }, api_version: '...' }
@@ -19,7 +18,7 @@ export class PaymentService {
     logger.info(`Product ID: ${product_id}`);
 
     if (subscriber_attributes) {
-      logger.info({ subscriber_attributes }, "Subscriber Attributes");
+      // logger.info({ subscriber_attributes }, "Subscriber Attributes");
     }
 
     try {
@@ -43,7 +42,7 @@ export class PaymentService {
           await this.deactivateSubscription(app_user_id);
           break;
         case "TEST":
-          logger.info("Test event received");
+          // logger.info("Test event received");
           break;
         default:
           logger.warn({ event_type }, "Unknown or unhandled RevenueCat event type");

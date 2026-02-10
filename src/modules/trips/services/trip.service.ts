@@ -56,14 +56,14 @@ export class TripService {
   }
 
   async getMyTrips(userId: string): Promise<any[]> {
-    logger.info({ userId }, "getMyTrips called");
+    // logger.info({ userId }, "getMyTrips called");
     const trips = await Trip.find({ creator_id: userId })
       .populate("creator_id", "username profile nomad_id")
       .populate("companions", "username profile nomad_id")
       .populate("interested_users.user_id", "username profile nomad_id")
       .sort({ created_at: -1 });
 
-    logger.info({ count: trips.length }, "getMyTrips results");
+    // logger.info({ count: trips.length }, "getMyTrips results");
 
     return trips.map(trip => {
       const tripObj = trip.toObject();
@@ -123,7 +123,7 @@ export class TripService {
       query.creator_id = { $ne: currentUserId };
     }
 
-    logger.info({ query: JSON.stringify(query), currentUserId }, "getNearbyTrips query");
+    // logger.info({ query: JSON.stringify(query), currentUserId }, "getNearbyTrips query");
 
     const trips = await Trip.find(query)
       .populate("creator_id", "username profile nomad_id rig")
@@ -132,7 +132,7 @@ export class TripService {
       .sort({ start_date: 1 })
       .limit(50);
 
-    logger.info({ count: trips.length }, "getNearbyTrips results");
+    // logger.info({ count: trips.length }, "getNearbyTrips results");
 
     return trips.map(trip => {
       const tripObj = trip.toObject();

@@ -32,7 +32,7 @@ export class FeedService {
         // Populate author for response
         await post.populate("author_id", "username profile.name profile.photo_url");
 
-        logger.info({ postId: post._id, userId }, "Post created successfully and cache invalidated");
+        // logger.info({ postId: post._id, userId }, "Post created successfully and cache invalidated");
 
         return post;
     }
@@ -50,7 +50,7 @@ export class FeedService {
         if (page === 1) {
             const cached = await getCachedFeed(userId);
             if (cached && cached.length > 0) {
-                logger.debug({ userId }, "Returning cached feed");
+                // logger.debug({ userId }, "Returning cached feed");
                 return {
                     posts: cached.slice(0, limit),
                     pagination: {
@@ -77,7 +77,7 @@ export class FeedService {
             // Fallback: push as string if needed, though likely won't match if schema is strict
         }
 
-        logger.debug({ userId, followingCount: following.length, totalFollowingIds: followingIds.length }, "Fetching timeline posts");
+        // logger.debug({ userId, followingCount: following.length, totalFollowingIds: followingIds.length }, "Fetching timeline posts");
 
         const skip = (page - 1) * limit;
 
@@ -90,7 +90,7 @@ export class FeedService {
             .populate("author_id", "username profile.name profile.photo_url nomad_id.verified")
             .lean();
 
-        logger.info({ userId, postsFound: posts.length, page }, "Timeline fetch completed");
+        // logger.info({ userId, postsFound: posts.length, page }, "Timeline fetch completed");
 
         const hasMore = posts.length > limit;
         const result = posts.slice(0, limit);

@@ -74,12 +74,13 @@ export class UserController {
     }, req.user?.userId); // Pass currentUserId for relationship metadata
 
     // RICH DEBUG LOGGING FOR USER
-    logger.info({
-      filters,
-      resultsCount: users.length,
-      total,
-      matchedUsernames: users.map(u => u.username)
-    }, "Search results returned to app");
+    // RICH DEBUG LOGGING FOR USER
+    // logger.info({
+    //   filters,
+    //   resultsCount: users.length,
+    //   total,
+    //   matchedUsernames: users.map(u => u.username)
+    // }, "Search results returned to app");
 
     ApiResponse.paginated(res, users, page, limit, total);
   });

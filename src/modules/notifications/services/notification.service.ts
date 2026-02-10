@@ -20,7 +20,7 @@ export class NotificationService {
       });
 
       // 2. Log (Simulating external push service)
-      logger.info({ userId, title, body, data }, "Push notification sent and saved");
+      // logger.info({ userId, title, body, data }, "Push notification sent and saved");
     } catch (error) {
       logger.error({ error, userId }, "Failed to save/send notification");
     }

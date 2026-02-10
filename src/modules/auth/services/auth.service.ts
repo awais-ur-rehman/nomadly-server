@@ -117,7 +117,7 @@ export class AuthService {
 
     try {
       await sendOtpEmail(email, code);
-      logger.info({ email }, "OTP sent successfully");
+      // logger.info({ email }, "OTP sent successfully");
     } catch (error) {
       // Log connection details for debugging
       const isTimeout = (error as any).code === 'ETIMEDOUT';
