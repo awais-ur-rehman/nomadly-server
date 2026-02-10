@@ -121,6 +121,12 @@ export class UserService {
     if (profileData.rig) {
       user.rig = { ...user.rig, ...profileData.rig };
     }
+    if (profileData.is_builder !== undefined) {
+      user.is_builder = profileData.is_builder;
+    }
+    if (profileData.builder_profile) {
+      user.builder_profile = { ...user.builder_profile, ...profileData.builder_profile };
+    }
 
     await user.save();
     const { password_hash, ...userWithoutPassword } = user.toObject();
