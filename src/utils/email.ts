@@ -75,9 +75,49 @@ export const sendEmail = async (
 
     logger.info({ to, subject, from: fromEmail }, "Email sent successfully");
   } catch (error) {
+    // Retry with Resend API if SMTP fails and we are using Resend
+    const isResend = (process.env.SMTP_HOST || "").includes("resend");
+    if (isResend) {
+      logger.warn({ error }, "SMTP failed, attempting Resend HTTP API fallback...");
+      try {
+        await sendResendApi(to, subject, html || text);
+        return;
+      } catch (apiError) {
+        logger.error({ apiError }, "Resend API also failed");
+        throw new Error(`Failed to send email via API: ${(apiError as Error).message}`);
+      }
+    }
+
     logger.error({ error, to, subject }, "Failed to send email");
     throw new Error(`Failed to send email: ${(error as Error).message}`);
   }
+};
+
+// Helper for Resend HTTP API (Bypasses SMTP port blocking on Render)
+const sendResendApi = async (to: string, subject: string, html: string) => {
+  const apiKey = process.env.SMTP_PASS; // The password IS the API key
+  if (!apiKey) throw new Error("Missing API Key for Resend");
+
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: "onboarding@resend.dev", // Must use this for testing/unverified domains
+      to: [to],
+      subject: subject,
+      html: html,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Resend API Error: ${response.status} ${errorText}`);
+  }
+
+  logger.info({ to, subject, method: "HTTP-API" }, "Email sent successfully via Resend API");
 };
 
 export const sendOtpEmail = async (email: string, code: string): Promise<void> => {
