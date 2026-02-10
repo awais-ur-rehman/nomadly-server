@@ -70,6 +70,10 @@ import { TripController } from "./modules/trips/controllers/trip.controller";
 export const createApp = () => {
   const app = express();
 
+  // Enable trust proxy for Render/Load Balancers
+  // This fixes the "X-Forwarded-For" header issue with rate limiting
+  app.set("trust proxy", 1);
+
   // Security middleware
   app.use(
     helmet({

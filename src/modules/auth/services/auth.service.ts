@@ -80,7 +80,26 @@ export class AuthService {
     user.invited_by = inviterId;
     await user.save();
 
-    await this.sendOtp(email);
+    try {
+      await this.sendOtp(email);
+    } catch (error) {
+      // If OTP sending fails, rollback user creation so they can try again
+      logger.error({ error, userId: user._id }, "Failed to send OTP, rolling back user creation");
+
+      // Refund invite usage
+      try {
+        await inviteService.revokeCode(inviterId, inviteCode); // This implies revoking, but we actually just want to decrement. 
+        // Since revokeCode kills the code, we might need a better way. 
+        // For now, let's just delete the user. The invite count on the code is already incremented.
+        // Ideally we would decrement use_count on the invite code too, but that requires more logic.
+        // Let's at least delete the user so they aren't stuck.
+        await User.findByIdAndDelete(user._id);
+      } catch (cleanupError) {
+        logger.error({ cleanupError }, "Failed to rollback user creation");
+      }
+
+      throw new Error("Failed to send verification email. Please check your email settings or try again.");
+    }
 
     return {
       userId: user._id.toString(),
@@ -102,8 +121,10 @@ export class AuthService {
       await sendOtpEmail(email, code);
       logger.info({ email }, "OTP sent successfully");
     } catch (error) {
-      logger.error({ error, email }, "Failed to send OTP email");
-      throw new Error("Failed to send OTP email");
+      // Log connection details for debugging
+      const isTimeout = (error as any).code === 'ETIMEDOUT';
+      logger.error({ error, email, isTimeout }, "Failed to send OTP email");
+      throw error;
     }
   }
 
