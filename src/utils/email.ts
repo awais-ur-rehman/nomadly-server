@@ -54,10 +54,21 @@ export const sendEmail = async (
     return;
   }
 
+  // Use Resend HTTP API immediately if detected (avoid SMTP delays on Render)
+  const isResend = (process.env.SMTP_HOST || "").includes("resend");
+  if (isResend) {
+    try {
+      await sendResendApi(to, subject, html || text);
+      return;
+    } catch (apiError) {
+      logger.error({ apiError }, "Resend API failed");
+      throw new Error(`Failed to send email via API: ${(apiError as Error).message}`);
+    }
+  }
+
   try {
     // Determine 'from' address
     // If using Resend and no specific FROM is set, MUST use onboarding@resend.dev to avoid errors
-    const isResend = (process.env.SMTP_HOST || "").includes("resend");
     let fromEmail = process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER;
 
     if (isResend && !process.env.SMTP_FROM_EMAIL) {
@@ -75,19 +86,6 @@ export const sendEmail = async (
 
     logger.info({ to, subject, from: fromEmail }, "Email sent successfully");
   } catch (error) {
-    // Retry with Resend API if SMTP fails and we are using Resend
-    const isResend = (process.env.SMTP_HOST || "").includes("resend");
-    if (isResend) {
-      logger.warn({ error }, "SMTP failed, attempting Resend HTTP API fallback...");
-      try {
-        await sendResendApi(to, subject, html || text);
-        return;
-      } catch (apiError) {
-        logger.error({ apiError }, "Resend API also failed");
-        throw new Error(`Failed to send email via API: ${(apiError as Error).message}`);
-      }
-    }
-
     logger.error({ error, to, subject }, "Failed to send email");
     throw new Error(`Failed to send email: ${(error as Error).message}`);
   }
