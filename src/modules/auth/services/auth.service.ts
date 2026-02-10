@@ -88,11 +88,9 @@ export class AuthService {
 
       // Refund invite usage
       try {
-        await inviteService.revokeCode(inviterId, inviteCode); // This implies revoking, but we actually just want to decrement. 
-        // Since revokeCode kills the code, we might need a better way. 
-        // For now, let's just delete the user. The invite count on the code is already incremented.
-        // Ideally we would decrement use_count on the invite code too, but that requires more logic.
-        // Let's at least delete the user so they aren't stuck.
+        // Use decrementUsage instead of revokeCode to keep the invite valid for others
+        await inviteService.decrementUsage(inviteCode, user._id.toString());
+
         await User.findByIdAndDelete(user._id);
       } catch (cleanupError) {
         logger.error({ cleanupError }, "Failed to rollback user creation");

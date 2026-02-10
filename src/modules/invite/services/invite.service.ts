@@ -97,8 +97,8 @@ export class InviteService {
     const invite = await this.validateCode(code);
 
     invite.use_count += 1;
-    if (!Array.isArray(invite.used_by)) {
-      invite.used_by = newUserId;
+    if (!invite.used_by || !Array.isArray(invite.used_by)) {
+      invite.used_by = [newUserId];
     } else {
       (invite.used_by as any).push(newUserId);
     }
@@ -116,6 +116,35 @@ export class InviteService {
     });
 
     return invite.created_by.toString();
+  }
+
+  /**
+   * Revert an invite usage (e.g., if user creation fails).
+   */
+  async decrementUsage(code: string, userId: string) {
+    const invite = await InviteCode.findOne({ code });
+    if (!invite) return;
+
+    if (invite.use_count > 0) {
+      invite.use_count -= 1;
+    }
+
+    // Remove the user from used_by array
+    if (Array.isArray(invite.used_by)) {
+      invite.used_by = invite.used_by.filter(id => id.toString() !== userId.toString());
+    }
+
+    // Re-activate if it was deactivated due to max uses
+    if (invite.use_count < invite.max_uses && (!invite.expires_at || invite.expires_at > new Date())) {
+      invite.is_active = true;
+    }
+
+    await invite.save();
+
+    // Decrement the inviter's invite_count
+    await User.findByIdAndUpdate(invite.created_by, {
+      $inc: { invite_count: -1 },
+    });
   }
 
   /**

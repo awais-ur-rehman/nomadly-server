@@ -4,7 +4,7 @@ import crypto from "crypto";
 export interface IInviteCode extends Document {
   code: string;
   created_by: string;
-  used_by?: string;
+  used_by?: string[];
   used_at?: Date;
   max_uses: number;
   use_count: number;
