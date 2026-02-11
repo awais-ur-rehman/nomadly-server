@@ -100,8 +100,8 @@ const usersData = [
         email: "marcus@nomadly.app",
         name: "Marcus Chen",
         password: "Test123!",
-        bio: "Full-time vanlife since 2022. Software engineer working remotely from my 2019 Sprinter. Currently chasing good weather and better wifi. 🚐💻",
-        hobbies: ["Coding", "Hiking", "Photography", "Coffee"],
+        bio: "Full-time vanlife since 2022. Remote travel writer and van build enthusiast living in my 2019 Sprinter. Currently chasing good weather and better stories. 🚐✍️",
+        hobbies: ["Writing", "Hiking", "Van Building", "Coffee"],
         intent: "friends" as const,
         rig_type: "sprinter" as const,
         crew_type: "solo" as const,
@@ -170,8 +170,8 @@ const usersData = [
         email: "alex.waves@proton.me",
         name: "Alex Nakamura",
         password: "Test123!",
-        bio: "Surf, code, repeat. Building apps from the beaches of Baja. Starlink changed my life. If the waves are good, I'm probably offline. 🏄‍♂️💻🌊",
-        hobbies: ["Surfing", "Web Development", "Spearfishing", "Spanish"],
+        bio: "Surf, adventure, repeat. Living the dream on the beaches of Baja. Starlink changed my life. If the waves are good, I'm probably offline. 🏄‍♂️🌊🚐",
+        hobbies: ["Surfing", "Outdoors", "Spearfishing", "Spanish"],
         intent: "dating" as const,
         rig_type: "sprinter" as const,
         crew_type: "solo" as const,
@@ -204,8 +204,8 @@ const usersData = [
         email: "ryan.codes@hey.com",
         name: "Ryan O'Brien",
         password: "Test123!",
-        bio: "DevOps engineer by day, campfire enthusiast by night. 3 years full-time in my RAM Promaster. Always looking for coworking buddies. ☕👨‍💻🔥",
-        hobbies: ["Programming", "Mountain Biking", "Craft Beer", "Board Games"],
+        bio: "Custom woodworker by day, campfire enthusiast by night. 3 years full-time in my RAM Promaster specializing in van furniture. Always looking for build buddies. 🛠️🚐🔥",
+        hobbies: ["Woodworking", "Mountain Biking", "Craft Beer", "Board Games"],
         intent: "friends" as const,
         rig_type: "van" as const,
         crew_type: "solo" as const,
@@ -566,9 +566,9 @@ async function seedActivities(userIds: string[]) {
     const activities = [
         {
             host: 0, // Marcus
-            title: "Morning Coffee & Coworking",
+            title: "Morning Coffee & Van Build Chat",
             type: "cowork",
-            desc: "Let's grab coffee at Sightglass and work together! I'll be there 8am-12pm. Good wifi, great espresso. All remote workers welcome!",
+            desc: "Let's grab coffee at Sightglass and talk about van builds! I'm currently working on my Sprinter's layout. All DIYers welcome!",
             lat: 37.7694,
             lng: -122.4098,
             participants: [6],
@@ -874,9 +874,9 @@ async function seedJobs(userIds: string[]) {
     const jobs = [
         {
             author: 0,
-            title: "React Developer for Nomad App",
-            desc: "Building a companion app for nomads. Need help with React Native components. Remote, flexible hours. 10-15 hours/week.",
-            category: "tech",
+            title: "Expert Help for Sprinter Roof Leak",
+            desc: "I've got a persistent leak near my MaxxAir fan that I can't seem to seal properly. Need someone with experience in marine grade sealants. Will pay for a few hours of help.",
+            category: "trade",
             budget: 65,
             type: "hourly" as const,
             isRemote: true,
@@ -907,9 +907,9 @@ async function seedJobs(userIds: string[]) {
         },
         {
             author: 6,
-            title: "AWS DevOps Assistance",
-            desc: "Need help setting up CI/CD pipeline for a small startup. Must know AWS, Docker, and GitHub Actions.",
-            category: "tech",
+            title: "Custom Cedar Ceiling Installation",
+            desc: "Need an extra pair of hands to help install cedar tongue-and-groove planks on my van ceiling. I have the tools, just need help with positioning.",
+            category: "trade",
             budget: 85,
             type: "hourly" as const,
             isRemote: true,
@@ -1080,9 +1080,9 @@ async function seedConversationsAndMessages(userIds: string[]): Promise<ConvoRes
         {
             users: [0, 6] as [number, number],
             messages: [
-                { sender: 6, text: "Hey! Another dev on the road! What stack are you working with?" },
-                { sender: 0, text: "Mostly TypeScript and React these days. You?" },
-                { sender: 6, text: "DevOps mainly - k8s, AWS, all the cloud stuff. We should cowork sometime!" },
+                { sender: 6, text: "Hey! Another builder on the road! What kind of wood are you using for your cabinets?" },
+                { sender: 0, text: "I'm thinking of using Baltic Birch, but it's getting pricey. You?" },
+                { sender: 6, text: "I've got a hookup for cedar tongue-and-groove. We should chat about insulation sometime!" },
             ]
         },
         {

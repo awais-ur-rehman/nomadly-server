@@ -16,7 +16,7 @@ jobs:
           # We use the variable if set, otherwise fail or warn
           if [ -z "${{ secrets.RENDER_BACKEND_URL }}" ]; then
             echo "URL not set in secrets. Please set RENDER_BACKEND_URL in GitHub Secrets."
-            echo "Example: https://nomadly-backend.onrender.com"
+            echo "Example: https://nomadly-server-1.onrender.com"
             exit 1
           else
             echo "Pinging ${{ secrets.RENDER_BACKEND_URL }}/health"
