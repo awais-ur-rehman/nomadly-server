@@ -72,26 +72,28 @@ export class PaymentService {
       return;
     }
 
-    const isVantagePro = productId.includes("vantage_pro");
-    const isAnnual = productId.toLowerCase().includes("annual") || productId.toLowerCase().includes("yearly");
+    // Determine subscription duration from product ID
+    const pid = productId.toLowerCase();
+    const isAnnual = pid.includes("annual") || pid.includes("yearly");
+    const isWeekly = pid.includes("weekly") || pid.includes("week");
 
-    // Default to 1 month (31 days) unless it's annual
     const durationMs = isAnnual
       ? 365 * 24 * 60 * 60 * 1000
-      : 31 * 24 * 60 * 60 * 1000;
+      : isWeekly
+        ? 7 * 24 * 60 * 60 * 1000
+        : 31 * 24 * 60 * 60 * 1000; // default monthly
 
+    // Treat ALL paid subscription products as Pro
     user.subscription = {
       status: "active",
-      plan: isVantagePro ? "vantage_pro" : "free",
+      plan: "vantage_pro",
       expires_at: new Date(Date.now() + durationMs),
       revenue_cat_id: productId,
     };
 
-    // Grant unlimited invites for Pro users and reset AI usage
-    if (isVantagePro) {
-      user.invite_count = 9999;
-      user.ai_usage = { count: 0, last_reset: new Date() };
-    }
+    // Grant Pro benefits: unlimited invites and reset AI usage
+    user.invite_count = 9999;
+    user.ai_usage = { count: 0, last_reset: new Date() };
 
     await user.save();
     logger.info({ userId, productId }, "Subscription activated");
@@ -181,19 +183,17 @@ export class PaymentService {
 
       const data = (await response.json()) as any;
       const subscriber = data.subscriber;
-      const entitlements = subscriber.entitlements.active;
+      const entitlements = subscriber?.entitlements?.active || {};
 
-      // Check for Pro entitlement (identifier depends on RC setup, commonly 'pro' or 'vantage_pro')
-      // We check if ANY entitlement is active that contains 'pro' or just if there are any active entitlements
-      // Adjust based on your specific entitlement identifier
-      const isPro = Object.keys(entitlements).some(key => key.toLowerCase().includes('pro') || key.toLowerCase().includes('vantage') || key.toLowerCase().includes('premium'));
+      // Check if user has ANY active entitlement (all paid products grant Pro)
+      const isPro = Object.keys(entitlements).length > 0;
 
       // Also check entitlements via product_id if entitlement logic is ambiguous
       // const activeSubscriptions = subscriber.subscriptions; // Map of product_id -> details
 
       if (isPro) {
         // Find the product ID causing this entitlement
-        const entitlementKey = Object.keys(entitlements).find(key => key.toLowerCase().includes('pro') || key.toLowerCase().includes('vantage')) || Object.keys(entitlements)[0];
+        const entitlementKey = Object.keys(entitlements)[0];
         const productId = entitlements[entitlementKey]?.product_identifier;
 
         await this.activateSubscription(userId, productId || 'unknown_pro_product');
